@@ -10,6 +10,7 @@ const { CompletionProvider } = require("./completion-provider");
 const { ReferencesProvider } = require("./references-provider");
 const { HoverProvider } = require("./hover-provider");
 const { SymbolsProvider } = require("./symbols-provider");
+const { DiagnosticsProvider } = require("./diagnostics-provider");
 const { Indexer } = require("./indexer");
 
 class ServerInstance {
@@ -35,8 +36,16 @@ class ServerInstance {
                 documentsInstance: this.documents,
             });
 
+            this.diagnosticsProvider = new DiagnosticsProvider(
+                this.connection,
+                this.documents,
+                this.rootUri,
+                this.indexer
+            );
+
             // Create the "index"
             await this.indexer.reindex();
+            this.diagnosticsProvider.publish();
 
             this.definitionProvider = new DefinitionProvider(
                 this.connection,
@@ -133,6 +142,7 @@ class ServerInstance {
         this.reindexingTimeout = setTimeout(() => {
             this.indexer
                 .reindex()
+                .then(() => this.diagnosticsProvider?.publish())
                 .catch((err) =>
                     console.error(`Failed to reindex: ${err.message}`)
                 );

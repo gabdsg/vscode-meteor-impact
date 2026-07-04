@@ -1,0 +1,13 @@
+<template name="diagT">
+    <div>{{usedHelper}}</div>
+    <div>{{badHelper someArg}}</div>
+    {{> missingTemplate}}
+</template>
+
+<template name="dup">
+    <span>ok</span>
+</template>
+
+<template name="dup">
+    <span>duplicated</span>
+</template>

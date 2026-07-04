@@ -28,7 +28,6 @@ class ReferencesProvider extends ServerBase {
         }
 
         const { NODE_TYPES } = require("./ast-helpers");
-        const { Location, Range } = require("vscode-languageserver");
 
         if (
             ![NODE_TYPES.LITERAL, NODE_TYPES.IDENTIFIER].includes(

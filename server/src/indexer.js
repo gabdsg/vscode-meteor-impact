@@ -134,6 +134,7 @@ class Indexer extends ServerBase {
                         astWalker,
                         uri,
                         htmlJs,
+                        fileContent,
                     };
                 } catch (e) {
                     console.error(`Error parsing ${uri}. ${e}`);
