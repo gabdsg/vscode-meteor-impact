@@ -1,6 +1,7 @@
 let client;
 let extractTemplateCommandDisposable;
 let renameTemplateCommandDisposable;
+let explorerDisposables = [];
 
 /**
  * The "Extract selection to template..." code action carries this command:
@@ -89,6 +90,10 @@ const connectToLanguageServer = async (asAbsolutePath) => {
         (clickedUri) => renameTemplate(clickedUri, client)
     );
 
+    const { registerMeteorExplorer } = require("./meteor-explorer");
+    explorerDisposables.forEach((disposable) => disposable?.dispose?.());
+    explorerDisposables = registerMeteorExplorer(client);
+
     return client;
 };
 
@@ -117,6 +122,8 @@ const stopServer = () => {
     extractTemplateCommandDisposable = undefined;
     renameTemplateCommandDisposable?.dispose?.();
     renameTemplateCommandDisposable = undefined;
+    explorerDisposables.forEach((disposable) => disposable?.dispose?.());
+    explorerDisposables = [];
 
     if (!client) return;
     client.stop();

@@ -131,8 +131,35 @@
                 "category": "Commands",
                 "command": "meteorImpact.renameTemplate",
                 "title": "Rename Blaze Template"
+            },
+            {
+                "category": "Commands",
+                "command": "meteorImpact.refreshExplorer",
+                "title": "Refresh Meteor Explorer",
+                "icon": "$(refresh)"
             }
         ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "meteorImpact",
+                    "title": "Meteor Impact",
+                    "icon": "images/blaze-icon.png"
+                }
+            ]
+        },
+        "views": {
+            "meteorImpact": [
+                {
+                    "id": "meteorImpactOverview",
+                    "name": "App Overview"
+                },
+                {
+                    "id": "meteorImpactHierarchy",
+                    "name": "Template Hierarchy"
+                }
+            ]
+        },
         "keybindings": [
             {
                 "command": "meteorImpact.goToCounterpart",
@@ -157,6 +184,13 @@
                 {
                     "command": "meteorImpact.createTemplate",
                     "when": "meteorImpact.isMeteorProject"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "meteorImpact.refreshExplorer",
+                    "when": "view == meteorImpactOverview || view == meteorImpactHierarchy",
+                    "group": "navigation"
                 }
             ]
         },

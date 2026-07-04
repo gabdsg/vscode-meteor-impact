@@ -16,6 +16,7 @@ const { RenameProvider } = require("./rename-provider");
 const { CodeActionsProvider } = require("./code-actions-provider");
 const { SemanticTokensProvider } = require("./semantic-tokens-provider");
 const { SignatureHelpProvider } = require("./signature-help-provider");
+const { OverviewProvider } = require("./overview-provider");
 const { Indexer } = require("./indexer");
 
 class ServerInstance {
@@ -112,6 +113,12 @@ class ServerInstance {
                 this.rootUri,
                 this.indexer
             );
+            this.overviewProvider = new OverviewProvider(
+                this.connection,
+                this.documents,
+                this.rootUri,
+                this.indexer
+            );
 
             return {
                 capabilities: {
@@ -191,6 +198,10 @@ class ServerInstance {
             "meteorImpact/renameTemplateFiles",
             (params) =>
                 this.renameProvider.executeTemplateFolderRename(params)
+        );
+        // Index summary for the Meteor Explorer views.
+        this.connection.onRequest("meteorImpact/appOverview", () =>
+            this.overviewProvider.onAppOverviewRequest()
         );
         this.connection.languages.semanticTokens.on((...params) =>
             this.semanticTokensProvider.onSemanticTokensRequest(...params)
