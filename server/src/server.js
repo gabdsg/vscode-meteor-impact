@@ -13,6 +13,7 @@ const { SymbolsProvider } = require("./symbols-provider");
 const { DiagnosticsProvider } = require("./diagnostics-provider");
 const { HtmlFeaturesProvider } = require("./html-features-provider");
 const { RenameProvider } = require("./rename-provider");
+const { CodeActionsProvider } = require("./code-actions-provider");
 const { Indexer } = require("./indexer");
 
 class ServerInstance {
@@ -91,6 +92,12 @@ class ServerInstance {
                 this.rootUri,
                 this.indexer
             );
+            this.codeActionsProvider = new CodeActionsProvider(
+                this.connection,
+                this.documents,
+                this.rootUri,
+                this.indexer
+            );
 
             return {
                 capabilities: {
@@ -103,6 +110,7 @@ class ServerInstance {
                     foldingRangeProvider: true,
                     linkedEditingRangeProvider: true,
                     renameProvider: { prepareProvider: true },
+                    codeActionProvider: { codeActionKinds: ["quickfix"] },
                     documentFormattingProvider: true,
                     documentRangeFormattingProvider: true,
                     completionProvider: {
@@ -145,6 +153,9 @@ class ServerInstance {
         );
         this.connection.languages.onLinkedEditingRange((...params) =>
             this.htmlFeaturesProvider.onLinkedEditingRangeRequest(...params)
+        );
+        this.connection.onCodeAction((...params) =>
+            this.codeActionsProvider.onCodeActionRequest(...params)
         );
         this.connection.onPrepareRename((...params) =>
             this.renameProvider.onPrepareRenameRequest(...params)

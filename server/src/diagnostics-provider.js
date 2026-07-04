@@ -91,6 +91,10 @@ class DiagnosticsProvider extends ServerBase {
                         severity: DiagnosticSeverity.Warning,
                         range: this.createRange(node.name.loc),
                         message: `Template "${partialName}" is not defined in this project (it may be provided by a package).`,
+                        data: {
+                            kind: "create-template",
+                            templateName: partialName,
+                        },
                     });
                 }
 
@@ -136,6 +140,13 @@ class DiagnosticsProvider extends ServerBase {
                     message: wrappingTemplateName
                         ? `Helper "${helperName}" is not defined on template "${wrappingTemplateName}" or globally.`
                         : `Helper "${helperName}" is not defined globally.`,
+                    data: wrappingTemplateName
+                        ? {
+                              kind: "create-helper",
+                              helperName,
+                              templateName: wrappingTemplateName,
+                          }
+                        : undefined,
                 });
             });
         }
@@ -180,11 +191,12 @@ class DiagnosticsProvider extends ServerBase {
         const { templateIndexMap, globalHelpersMap, htmlUsageMap } =
             this.indexer.blazeIndexer;
 
-        const unusedHelperDiagnostic = (helper, message) => ({
+        const unusedHelperDiagnostic = (helper, message, data) => ({
             severity: DiagnosticSeverity.Hint,
             tags: [DiagnosticTag.Unnecessary],
             range: this.createRange(helper),
             message,
+            data,
         });
 
         for (const [templateName, template] of Object.entries(
@@ -200,7 +212,8 @@ class DiagnosticsProvider extends ServerBase {
                     helper.uri,
                     unusedHelperDiagnostic(
                         helper,
-                        `Helper "${helperName}" of template "${templateName}" is never used in any template.`
+                        `Helper "${helperName}" of template "${templateName}" is never used in any template.`,
+                        { kind: "remove-helper", helperName, templateName }
                     )
                 );
             }
