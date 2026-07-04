@@ -4,6 +4,15 @@ All notable changes to the "meteor-dev" extension will be documented in this fil
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [04/07/26]
+
+-   Add TypeScript support to the language server indexer: `.js` and `.ts` files are now parsed with `@babel/parser` (estree-compatible AST), so `.ts` files no longer drop out of the index, and definition/references/completion also work from `.ts` files.
+-   Index `Template.registerHelper` calls as global helpers, with definition fallback when a mustache doesn't match a template-scoped helper.
+-   Index every `<template>` tag of an HTML content chunk with its precise location (previously only the first one per chunk was indexed).
+-   Support `Template["kebab-name"]` computed member access and string literal helper keys when indexing helpers.
+-   Index `Template.X.events` maps and support find-references on event handler keys.
+-   Fix crash when resolving helpers of a template that has none indexed.
+
 ## [07/01/23]
 
 -   Fix issue where methods declared as an object property were not being properly indexed.
