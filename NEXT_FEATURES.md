@@ -13,19 +13,38 @@ The original WebStorm-parity roadmap is fully implemented:
 9. ~~Embedded HTML language service~~ (HTML completion/hover/folding + Emmet in spacebars files)
 10. ~~Spacebars formatting~~ (document + range, mustache-block indentation)
 
+Round A is implemented too:
+
+- ~~Linked editing of paired HTML tags~~ (requires `editor.linkedEditing`)
+- ~~Quick fixes~~ (create missing template/helper stubs, remove unused helpers)
+- ~~Event selector intelligence~~ (event key -> element definition, class
+  token -> handler references, selector completion in event keys)
+
 ## Ideas for future rounds
 
-- **Linked editing / auto-rename of paired HTML tags** in spacebars files
-  (`linkedEditingRangeProvider`, supported by vscode-html-languageservice).
-- **Event selector intelligence**: jump from `"click .js-save"` to the
-  elements matching `.js-save` in the template HTML, and completion of
-  classes present in the template when typing an event key.
-- **Signature help for helpers**: show the helper's parameters (from the
-  JS/TS function signature) when typing `{{helper |}}`.
-- **Package awareness**: index templates/helpers of local `packages/` and
-  optionally installed Atmosphere packages, removing the "may be provided
-  by a package" hedge from diagnostics.
-- **Data context inference**: track `{{#each}}`/`{{#with}}` context types
-  (from TS types on helpers) to offer property completions inside blocks.
-- **Semantic tokens** for mustaches, so helpers/templates/globals get
-  distinct colors.
+### Round B - "the editor understands Spacebars deeply"
+
+- **Semantic tokens** for mustaches, so scoped helpers, global helpers,
+  template partials, block keywords and unresolved names get distinct
+  colors. The resolution logic already exists in the hover provider; the
+  work is the LSP token encoding.
+- **Block-variable awareness**: track `{{#each x in ...}}`, `{{#let}}` and
+  `{{#with}}` scopes so completion offers the bound variables and semantic
+  tokens/diagnostics treat them as resolved.
+- **Signature help**: capture helper parameter lists at index time (slice
+  the function signature by loc) and serve `{{helper |}}` plus
+  `Meteor.call("x", |)` signature requests.
+
+### Round C - bigger bets
+
+- **Package awareness**: read `.meteor/versions` and index the .html/.js
+  sources of installed packages from `~/.meteor/packages` read-only, so
+  package templates (e.g. `loginButtons`) get go-to-definition and stop
+  needing the "may be provided by a package" hedge in diagnostics.
+- **Extract template refactor**: code action that moves the selected HTML
+  into a new `<template>`, replaces it with `{{> name}}` and optionally
+  stubs the code-behind.
+- **Data context inference** (full version): run the TypeScript checker
+  against code-behind files to know helper return types and offer property
+  completions inside `{{#each}}`/`{{#with}}` blocks. Consider building it
+  into `typescript-meteor-toolbox-plugin` instead of the language server.

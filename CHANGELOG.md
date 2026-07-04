@@ -6,6 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [04/07/26]
 
+-   Add linked editing of paired HTML tags in Spacebars files.
+-   Add quick fixes for diagnostics: create missing template/helper stubs, remove unused helpers.
+-   Connect event maps with template HTML: go-to-definition from event keys to targeted elements, find handlers from class/id tokens, and selector completion inside event keys.
+-   Make project indexing deterministic regardless of file read order.
 -   Embed the HTML language service: HTML completion, hover, folding ranges and Emmet now work in Spacebars files alongside the Blaze features.
 -   Add rename refactoring for helpers, templates, methods/publications and event keys, updating definitions and usages together. Helper renames are scope-aware: only the resolved template scope (or the global helper, excluding shadowed usages) is renamed.
 -   Reindex changed files incrementally (following unsaved edits) instead of reindexing the whole project on every change.
