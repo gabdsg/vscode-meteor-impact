@@ -12,6 +12,7 @@ const { HoverProvider } = require("./hover-provider");
 const { SymbolsProvider } = require("./symbols-provider");
 const { DiagnosticsProvider } = require("./diagnostics-provider");
 const { HtmlFeaturesProvider } = require("./html-features-provider");
+const { RenameProvider } = require("./rename-provider");
 const { Indexer } = require("./indexer");
 
 class ServerInstance {
@@ -84,6 +85,12 @@ class ServerInstance {
                 this.rootUri,
                 this.indexer
             );
+            this.renameProvider = new RenameProvider(
+                this.connection,
+                this.documents,
+                this.rootUri,
+                this.indexer
+            );
 
             return {
                 capabilities: {
@@ -94,6 +101,7 @@ class ServerInstance {
                     documentSymbolProvider: true,
                     workspaceSymbolProvider: true,
                     foldingRangeProvider: true,
+                    renameProvider: { prepareProvider: true },
                     completionProvider: {
                         resolveProvider: "true",
                         triggerCharacters: ["."],
@@ -131,6 +139,12 @@ class ServerInstance {
         );
         this.connection.onFoldingRanges((...params) =>
             this.htmlFeaturesProvider.onFoldingRangesRequest(...params)
+        );
+        this.connection.onPrepareRename((...params) =>
+            this.renameProvider.onPrepareRenameRequest(...params)
+        );
+        this.connection.onRenameRequest((...params) =>
+            this.renameProvider.onRenameRequest(...params)
         );
         this.connection.onDidChangeConfiguration((...params) =>
             this.indexer.onDidChangeConfiguration(...params)

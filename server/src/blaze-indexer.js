@@ -10,9 +10,11 @@ class BlazeIndexer {
         this.globalHelpersMap = {};
         // Event key -> every location where a handler is defined for it.
         this.eventsMap = {};
+        // Template name -> every Template.X / Template["x"] JS reference.
+        this.templateJsReferences = {};
     }
 
-    addHelpersToMap({ templateName, helperName, value, uri, kind }) {
+    addHelpersToMap({ templateName, helperName, value, uri, kind, key }) {
         this.templateIndexMap[templateName] =
             this.templateIndexMap[templateName] || {};
 
@@ -24,12 +26,18 @@ class BlazeIndexer {
         this.templateIndexMap[templateName][kind] =
             this.templateIndexMap[templateName][kind] || {};
 
+        const { NODE_TYPES } = require("./ast-helpers");
+
         // Keep the uri around so that providers can point to the correct
-        // file (.js or .ts) where the helper is defined.
+        // file (.js or .ts) where the helper is defined. The key location
+        // (property name only, as opposed to the whole property) is used by
+        // rename.
         this.templateIndexMap[templateName][kind][helperName] = {
             start: value.start,
             end: value.end,
             uri,
+            keyLoc: key?.loc,
+            keyIsLiteral: key?.type === NODE_TYPES.LITERAL,
         };
     }
 
@@ -94,6 +102,46 @@ class BlazeIndexer {
         };
     }
 
+    /**
+     * Track every Template.X / Template["x-y"] member access in JS/TS, so
+     * that renaming a template can update its JS references too.
+     */
+    indexTemplateJsReferences({ node, uri }) {
+        const { NODE_TYPES, NODE_NAMES } = require("./ast-helpers");
+
+        if (
+            !node ||
+            node.type !== NODE_TYPES.MEMBER_EXPRESSION ||
+            node.object?.type !== NODE_TYPES.IDENTIFIER ||
+            node.object.name !== NODE_NAMES.TEMPLATE
+        ) {
+            return;
+        }
+
+        const templateName = this.getTemplateNameFromProperty(node.property);
+        if (!templateName) return;
+
+        const { loc } = node.property;
+        const entryKey = `${uri.fsPath}${loc.start.line}${loc.start.column}`;
+
+        this.templateJsReferences[templateName] =
+            this.templateJsReferences[templateName] || [];
+        if (
+            this.templateJsReferences[templateName].some(
+                ({ entryKey: existing }) => existing === entryKey
+            )
+        ) {
+            return;
+        }
+
+        this.templateJsReferences[templateName].push({
+            loc,
+            isLiteral: node.property.type === NODE_TYPES.LITERAL,
+            uri,
+            entryKey,
+        });
+    }
+
     indexHelpers({ node, uri }) {
         const { NODE_TYPES } = require("./ast-helpers");
 
@@ -144,6 +192,7 @@ class BlazeIndexer {
                     value: loc,
                     uri,
                     kind: caller,
+                    key,
                 });
 
                 if (caller === TEMPLATE_CALLERS.EVENTS) {
@@ -387,6 +436,18 @@ class BlazeIndexer {
         for (const [name, helper] of Object.entries(this.globalHelpersMap)) {
             if (matches(helper.uri)) delete this.globalHelpersMap[name];
         }
+
+        for (const [name, entries] of Object.entries(
+            this.templateJsReferences
+        )) {
+            const remaining = entries.filter(({ uri }) => !matches(uri));
+
+            if (!remaining.length) {
+                delete this.templateJsReferences[name];
+            } else if (remaining.length !== entries.length) {
+                this.templateJsReferences[name] = remaining;
+            }
+        }
     }
 
     reset() {
@@ -394,6 +455,7 @@ class BlazeIndexer {
         this.htmlUsageMap = {};
         this.globalHelpersMap = {};
         this.eventsMap = {};
+        this.templateJsReferences = {};
     }
 }
 

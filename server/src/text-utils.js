@@ -30,7 +30,8 @@ const offsetToLoc = (content, offset) => {
 
 /**
  * All the <template name="..."> and </template> tags of the file, in order,
- * as { name, isClosing, start, end } entries (offsets).
+ * as { name, isClosing, start, end, nameStart } entries (offsets).
+ * nameStart is the offset of the name attribute value.
  */
 const getTemplateTags = (content) => {
     return [...content.matchAll(TEMPLATE_TAG_REGEX)].map((match) => ({
@@ -38,6 +39,9 @@ const getTemplateTags = (content) => {
         isClosing: !match[1],
         start: match.index,
         end: match.index + match[0].length,
+        nameStart: match[1]
+            ? match.index + match[0].indexOf("name=") + "name=".length + 1
+            : undefined,
     }));
 };
 

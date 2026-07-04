@@ -82,16 +82,27 @@ class Indexer extends ServerBase {
             );
         }
 
-        let previousNode;
         astWalker.walkUntil((node) => {
             this.methodsAndPublicationsIndexer.indexDefinitions({ uri, node });
+
+            this.blazeIndexer.indexHelpers({ node, uri });
+            this.blazeIndexer.indexTemplateJsReferences({ node, uri });
+        });
+    }
+
+    /**
+     * Usages can only be matched against known definitions, so this pass
+     * must run after every file had its definitions indexed - otherwise
+     * usages in files that sort before their definition are lost.
+     */
+    indexJsFileUsages({ uri, astWalker }) {
+        let previousNode;
+        astWalker.walkUntil((node) => {
             this.methodsAndPublicationsIndexer.indexUsage({
                 uri,
                 node,
                 previousNode,
             });
-
-            this.blazeIndexer.indexHelpers({ node, uri });
             previousNode = node;
         });
     }
@@ -163,6 +174,10 @@ class Indexer extends ServerBase {
         );
 
         this.indexFileInfo(fileInfo);
+        if (!this.isFileSpacebarsHTML(uri)) {
+            this.indexJsFileUsages(fileInfo);
+        }
+
         this.sources[uri.fsPath] = fileInfo;
 
         return true;
@@ -190,7 +205,16 @@ class Indexer extends ServerBase {
             })
         );
 
-        this.sources = results.filter(Boolean).reduce(
+        const validResults = results.filter(Boolean);
+
+        // Second pass, once every definition is known.
+        validResults.forEach((fileInfo) => {
+            if (fileInfo.extension === ".html") return;
+
+            this.indexJsFileUsages(fileInfo);
+        });
+
+        this.sources = validResults.reduce(
             (acc, fileInfo) => ({
                 ...acc,
                 [fileInfo.uri.fsPath]: fileInfo,
