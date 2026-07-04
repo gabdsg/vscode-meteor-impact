@@ -28,6 +28,7 @@ const {
 const {
     generateMeteorSettingsTypes,
 } = require("./src/generate-settings-types");
+const { registerBlazeBlockAutoClose } = require("./src/blaze-auto-close");
 
 const createOrUpdateJsConfigFile = () => {
     generateBaseJsConfig();
@@ -179,6 +180,7 @@ async function activate(context) {
         goToCounterpartDisposable,
         fileNestingDisposable,
         settingsTypesDisposable,
+        registerBlazeBlockAutoClose(),
         ...registerMeteorPackagesFileProviders()
     );
 }
