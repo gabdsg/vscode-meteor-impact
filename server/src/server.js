@@ -8,6 +8,7 @@ const { TextDocument } = require("vscode-languageserver-textdocument");
 const { DefinitionProvider } = require("./definition-provider");
 const { CompletionProvider } = require("./completion-provider");
 const { ReferencesProvider } = require("./references-provider");
+const { HoverProvider } = require("./hover-provider");
 const { Indexer } = require("./indexer");
 
 class ServerInstance {
@@ -54,12 +55,19 @@ class ServerInstance {
                 this.rootUri,
                 this.indexer
             );
+            this.hoverProvider = new HoverProvider(
+                this.connection,
+                this.documents,
+                this.rootUri,
+                this.indexer
+            );
 
             return {
                 capabilities: {
                     textDocumentSync: TextDocumentSyncKind.Incremental,
                     definitionProvider: true,
                     referencesProvider: true,
+                    hoverProvider: true,
                     completionProvider: {
                         resolveProvider: "true",
                         triggerCharacters: ["."],
@@ -82,6 +90,9 @@ class ServerInstance {
         );
         this.connection.onReferences((...params) =>
             this.referencesProvider.onReferenceRequest(...params)
+        );
+        this.connection.onHover((...params) =>
+            this.hoverProvider.onHoverRequest(...params)
         );
         this.connection.onDidChangeConfiguration((...params) =>
             this.indexer.onDidChangeConfiguration(...params)
