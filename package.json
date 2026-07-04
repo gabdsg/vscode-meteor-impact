@@ -167,6 +167,20 @@
                 "configuration": "./spacebars/language-configuration.json"
             }
         ],
+        "snippets": [
+            {
+                "language": "spacebars",
+                "path": "./snippets/spacebars.json"
+            },
+            {
+                "language": "javascript",
+                "path": "./snippets/meteor.json"
+            },
+            {
+                "language": "typescript",
+                "path": "./snippets/meteor.json"
+            }
+        ],
         "grammars": [
             {
                 "language": "spacebars",

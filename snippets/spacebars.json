@@ -1,0 +1,64 @@
+{
+    "Blaze template": {
+        "prefix": "template",
+        "body": ["<template name=\"${1:name}\">", "    $0", "</template>"],
+        "description": "Blaze <template> block"
+    },
+    "Blaze if block": {
+        "prefix": "if",
+        "body": ["{{#if ${1:condition}}}", "    $TM_SELECTED_TEXT$0", "{{/if}}"],
+        "description": "{{#if}} block (works with Surround With)"
+    },
+    "Blaze if/else block": {
+        "prefix": "ifelse",
+        "body": [
+            "{{#if ${1:condition}}}",
+            "    $TM_SELECTED_TEXT$0",
+            "{{else}}",
+            "    ",
+            "{{/if}}"
+        ],
+        "description": "{{#if}}...{{else}} block"
+    },
+    "Blaze unless block": {
+        "prefix": "unless",
+        "body": [
+            "{{#unless ${1:condition}}}",
+            "    $TM_SELECTED_TEXT$0",
+            "{{/unless}}"
+        ],
+        "description": "{{#unless}} block (works with Surround With)"
+    },
+    "Blaze each-in block": {
+        "prefix": "each",
+        "body": [
+            "{{#each ${1:item} in ${2:items}}}",
+            "    $TM_SELECTED_TEXT$0",
+            "{{/each}}"
+        ],
+        "description": "{{#each x in items}} block (works with Surround With)"
+    },
+    "Blaze with block": {
+        "prefix": "with",
+        "body": [
+            "{{#with ${1:dataContext}}}",
+            "    $TM_SELECTED_TEXT$0",
+            "{{/with}}"
+        ],
+        "description": "{{#with}} block (works with Surround With)"
+    },
+    "Blaze let block": {
+        "prefix": "let",
+        "body": [
+            "{{#let ${1:name}=${2:value}}}",
+            "    $TM_SELECTED_TEXT$0",
+            "{{/let}}"
+        ],
+        "description": "{{#let}} block (works with Surround With)"
+    },
+    "Blaze partial": {
+        "prefix": "partial",
+        "body": ["{{> ${1:templateName}}}"],
+        "description": "{{> template}} inclusion"
+    }
+}

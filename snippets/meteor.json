@@ -1,0 +1,85 @@
+{
+    "Template helpers": {
+        "prefix": "thelpers",
+        "body": [
+            "Template.${1:templateName}.helpers({",
+            "    ${2:helperName}() {",
+            "        $0",
+            "    },",
+            "});"
+        ],
+        "description": "Template.X.helpers block"
+    },
+    "Template events": {
+        "prefix": "tevents",
+        "body": [
+            "Template.${1:templateName}.events({",
+            "    \"${2:click} ${3:.selector}\"(event, instance) {",
+            "        $0",
+            "    },",
+            "});"
+        ],
+        "description": "Template.X.events block"
+    },
+    "Template onCreated": {
+        "prefix": "toncreated",
+        "body": [
+            "Template.${1:templateName}.onCreated(function () {",
+            "    $0",
+            "});"
+        ],
+        "description": "Template.X.onCreated block"
+    },
+    "Template onRendered": {
+        "prefix": "tonrendered",
+        "body": [
+            "Template.${1:templateName}.onRendered(function () {",
+            "    $0",
+            "});"
+        ],
+        "description": "Template.X.onRendered block"
+    },
+    "Template onDestroyed": {
+        "prefix": "tondestroyed",
+        "body": [
+            "Template.${1:templateName}.onDestroyed(function () {",
+            "    $0",
+            "});"
+        ],
+        "description": "Template.X.onDestroyed block"
+    },
+    "Template subscription with autorun": {
+        "prefix": "tsubscribe",
+        "body": [
+            "this.autorun(() => {",
+            "    this.subscribe(\"${1:publicationName}\"$2);",
+            "});"
+        ],
+        "description": "Reactive subscription inside onCreated"
+    },
+    "Meteor methods": {
+        "prefix": "mmethods",
+        "body": [
+            "Meteor.methods({",
+            "    \"${1:methodName}\"($2) {",
+            "        $0",
+            "    },",
+            "});"
+        ],
+        "description": "Meteor.methods block"
+    },
+    "Meteor publication": {
+        "prefix": "mpublish",
+        "body": [
+            "Meteor.publish(\"${1:publicationName}\", function ($2) {",
+            "    return $0;",
+            "});"
+        ],
+        "description": "Meteor.publish block"
+    },
+    "Tracker autorun": {
+        "prefix": "autorun",
+        "body": ["Tracker.autorun(() => {", "    $0", "});"],
+        "description": "Tracker.autorun block"
+    }
+}
