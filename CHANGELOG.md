@@ -6,6 +6,13 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [04/07/26]
 
+-   Offer context-aware completions in Spacebars templates: helpers of the wrapping template and global helpers inside `{{...}}`, template names after `{{>`.
+-   Complete method and publication names inside `Meteor.call`/`callAsync`/`subscribe` string arguments.
+-   Support find-references from HTML files (mustaches and partials), including definitions.
+-   Add hover cards for helpers, templates, methods, publications and event keys.
+-   Add outline/breadcrumbs (document symbols) and workspace symbol search for templates, helpers, events, methods and publications.
+-   Publish project diagnostics: unresolved partials, unresolved helper calls with arguments, duplicate template names and unused helpers.
+-   Register TypeScript documents with the language client.
 -   Add TypeScript support to the language server indexer: `.js` and `.ts` files are now parsed with `@babel/parser` (estree-compatible AST), so `.ts` files no longer drop out of the index, and definition/references/completion also work from `.ts` files.
 -   Index `Template.registerHelper` calls as global helpers, with definition fallback when a mustache doesn't match a template-scoped helper.
 -   Index every `<template>` tag of an HTML content chunk with its precise location (previously only the first one per chunk was indexed).
