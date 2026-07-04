@@ -8,7 +8,7 @@ The original WebStorm-parity roadmap is fully implemented:
 4. ~~Hover~~ (helpers, templates, methods, publications, event keys)
 5. ~~Document/workspace symbols~~ (outline, breadcrumbs, Ctrl+T)
 6. ~~Project diagnostics~~ (unresolved partials/helper calls, duplicates, unused helpers)
-7. ~~Rename refactoring~~ (helpers, templates, methods/publications, event keys)
+7. ~~Rename refactoring~~ (helpers, templates, methods/publications, event keys; helper renames are scope-aware)
 8. ~~Incremental reindexing~~ (per-file, follows unsaved buffers, 300ms debounce)
 9. ~~Embedded HTML language service~~ (HTML completion/hover/folding + Emmet in spacebars files)
 10. ~~Spacebars formatting~~ (document + range, mustache-block indentation)
@@ -17,9 +17,6 @@ The original WebStorm-parity roadmap is fully implemented:
 
 - **Linked editing / auto-rename of paired HTML tags** in spacebars files
   (`linkedEditingRangeProvider`, supported by vscode-html-languageservice).
-- **Scope-aware helper rename**: rename is currently by-name and
-  project-wide; usages could be narrowed to the templates that actually
-  define the helper by resolving each usage's wrapping template.
 - **Event selector intelligence**: jump from `"click .js-save"` to the
   elements matching `.js-save` in the template HTML, and completion of
   classes present in the template when typing an event key.

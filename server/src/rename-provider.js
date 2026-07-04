@@ -77,8 +77,9 @@ class RenameProvider extends ServerBase {
     resolveHtmlTarget({ uri, position }) {
         const { AstWalker, NODE_TYPES } = require("./ast-helpers");
 
+        const content = this.getFileContent(uri);
         const htmlWalker = new AstWalker(
-            this.getFileContent(uri),
+            content,
             require("@handlebars/parser").parse
         );
 
@@ -103,14 +104,40 @@ class RenameProvider extends ServerBase {
 
         const name = symbol.parts[0];
         const originRange = this.createRange(symbol.loc);
-        const { blazeIndexer } = this.indexer;
+        const { templateIndexMap, globalHelpersMap } = this.indexer.blazeIndexer;
 
-        if (this.findHelperDefinitions(name).length) {
-            return { kind: "helper", name, originRange };
+        // Resolve the usage to its actual helper: the wrapping template's
+        // scoped helper shadows a global with the same name.
+        const { positionToOffset, getWrappingTemplateName } =
+            require("./text-utils");
+        const wrappingTemplateName = getWrappingTemplateName(
+            content,
+            positionToOffset(content, position)
+        );
+
+        if (
+            !!wrappingTemplateName &&
+            templateIndexMap[wrappingTemplateName]?.helpers?.[name]
+        ) {
+            return {
+                kind: "helper",
+                name,
+                originRange,
+                scope: { templateName: wrappingTemplateName },
+            };
+        }
+
+        if (globalHelpersMap[name]) {
+            return {
+                kind: "helper",
+                name,
+                originRange,
+                scope: { global: true },
+            };
         }
 
         // Block/each parameters can reference templates too.
-        if (blazeIndexer.templateIndexMap[name]) {
+        if (templateIndexMap[name]) {
             return { kind: "template", name, originRange };
         }
 
@@ -155,8 +182,15 @@ class RenameProvider extends ServerBase {
             return { kind: "publication", name, originRange };
         }
 
-        if (this.findHelperDefinitions(name).length) {
-            return { kind: "helper", name, originRange };
+        // Helper renames are anchored to the definition key the cursor is
+        // on, so that only the right scope is renamed.
+        const helperScope = this.findHelperScopeAtNode({
+            uri,
+            name,
+            loc: nodeAtPosition.loc,
+        });
+        if (helperScope) {
+            return { kind: "helper", name, originRange, scope: helperScope };
         }
 
         if (blazeIndexer.eventsMap[name]) {
@@ -173,18 +207,59 @@ class RenameProvider extends ServerBase {
         return;
     }
 
-    findHelperDefinitions(name) {
+    // Which helper definition (if any) is the given JS node? Matched by
+    // exact position against the indexed definition keys.
+    findHelperScopeAtNode({ uri, name, loc }) {
         const { templateIndexMap, globalHelpersMap } = this.indexer.blazeIndexer;
 
-        return [
-            ...Object.values(templateIndexMap).flatMap((template) =>
-                template.helpers?.[name] ? [template.helpers[name]] : []
-            ),
-            ...(globalHelpersMap[name] ? [globalHelpersMap[name]] : []),
-        ];
+        const fsPath = this.parseUri(uri).fsPath;
+        const samePosition = (otherLoc) =>
+            !!otherLoc &&
+            otherLoc.start.line === loc.start.line &&
+            otherLoc.start.column === loc.start.column;
+
+        for (const [templateName, template] of Object.entries(
+            templateIndexMap
+        )) {
+            const helper = template.helpers?.[name];
+            if (
+                helper?.uri?.fsPath === fsPath &&
+                samePosition(helper.keyLoc)
+            ) {
+                return { templateName };
+            }
+        }
+
+        const globalHelper = globalHelpersMap[name];
+        if (
+            globalHelper?.uri?.fsPath === fsPath &&
+            samePosition(globalHelper.node?.loc)
+        ) {
+            return { global: true };
+        }
+
+        return;
     }
 
-    buildEdits({ kind, name }, newName) {
+    // Wrapping template of an indexed HTML usage, resolved from the file
+    // content kept on the sources map.
+    getUsageWrappingTemplate({ node, uri }) {
+        const source = this.indexer.getSources()[uri.fsPath];
+        if (!source?.fileContent) return;
+
+        const { positionToOffset, getWrappingTemplateName } =
+            require("./text-utils");
+
+        return getWrappingTemplateName(
+            source.fileContent,
+            positionToOffset(source.fileContent, {
+                line: node.loc.start.line - 1,
+                character: node.loc.start.column,
+            })
+        );
+    }
+
+    buildEdits({ kind, name, scope }, newName) {
         const { TextEdit } = require("vscode-languageserver");
 
         const changes = {};
@@ -201,28 +276,14 @@ class RenameProvider extends ServerBase {
 
         const { blazeIndexer, methodsAndPublicationsIndexer } = this.indexer;
 
-        // HTML usages apply to helpers and templates alike.
-        if (["helper", "template"].includes(kind)) {
+        if (kind === "template") {
             for (const { node, uri } of blazeIndexer.htmlUsageMap[name] || []) {
                 addEdit(uri, this.createRange(node.loc));
             }
         }
 
         if (kind === "helper") {
-            for (const helper of this.findHelperDefinitions(name)) {
-                if (helper.keyLoc) {
-                    // Template-scoped helper: edit the property key only.
-                    addEdit(
-                        helper.uri,
-                        helper.keyIsLiteral
-                            ? this.createInnerRange(helper.keyLoc)
-                            : this.createRange(helper.keyLoc)
-                    );
-                } else if (helper.node) {
-                    // Global helper: the registerHelper name argument.
-                    addEdit(helper.uri, this.createInnerRange(helper.node.loc));
-                }
-            }
+            this.addScopedHelperEdits({ name, scope, addEdit });
         }
 
         if (kind === "template") {
@@ -275,6 +336,52 @@ class RenameProvider extends ServerBase {
         }
 
         return changes;
+    }
+
+    /**
+     * Scope-aware helper edits: only the definition of the resolved scope
+     * and the usages that actually resolve to it are renamed. A usage
+     * resolves to the wrapping template's scoped helper if one exists, and
+     * to the global helper otherwise.
+     */
+    addScopedHelperEdits({ name, scope, addEdit }) {
+        const { templateIndexMap, globalHelpersMap } =
+            this.indexer.blazeIndexer;
+
+        if (scope?.templateName) {
+            const helper = templateIndexMap[scope.templateName]?.helpers?.[
+                name
+            ];
+            if (helper?.keyLoc) {
+                // Edit the property key only, keeping literal quotes.
+                addEdit(
+                    helper.uri,
+                    helper.keyIsLiteral
+                        ? this.createInnerRange(helper.keyLoc)
+                        : this.createRange(helper.keyLoc)
+                );
+            }
+        } else if (scope?.global && globalHelpersMap[name]?.node) {
+            addEdit(
+                globalHelpersMap[name].uri,
+                this.createInnerRange(globalHelpersMap[name].node.loc)
+            );
+        }
+
+        for (const usage of this.indexer.blazeIndexer.htmlUsageMap[name] ||
+            []) {
+            const wrappingTemplateName = this.getUsageWrappingTemplate(usage);
+            const resolvesToScopedHelper =
+                !!wrappingTemplateName &&
+                !!templateIndexMap[wrappingTemplateName]?.helpers?.[name];
+
+            const belongsToScope = scope?.templateName
+                ? wrappingTemplateName === scope.templateName
+                : !resolvesToScopedHelper;
+            if (!belongsToScope) continue;
+
+            addEdit(usage.uri, this.createRange(usage.node.loc));
+        }
     }
 
     // Edit the name="..." attribute of every <template> tag with this name.
