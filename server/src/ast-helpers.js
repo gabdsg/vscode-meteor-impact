@@ -149,10 +149,34 @@ const parseJsSource = (
     });
 };
 
+/**
+ * Parameter list of a function node, as source text (including TS
+ * annotations), for signature help. Babel keeps char offsets on nodes, so
+ * the raw text can be sliced out.
+ */
+const extractFunctionSignature = (fnNode, fileContent) => {
+    if (
+        !fnNode ||
+        !Array.isArray(fnNode.params) ||
+        typeof fileContent !== "string"
+    ) {
+        return;
+    }
+
+    return {
+        params: fnNode.params.map((param) =>
+            param.start != null && param.end != null
+                ? fileContent.slice(param.start, param.end)
+                : param.name || "arg"
+        ),
+    };
+};
+
 module.exports = {
     createPositionObject,
     AstWalker,
     NODE_TYPES,
     parseJsSource,
+    extractFunctionSignature,
     NODE_NAMES,
 };

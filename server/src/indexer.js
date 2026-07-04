@@ -79,7 +79,7 @@ class Indexer extends ServerBase {
         }
     }
 
-    indexJsFile({ uri, astWalker }) {
+    indexJsFile({ uri, astWalker, fileContent }) {
         if (!astWalker || !uri) {
             throw new Error(
                 `Expected to receive uri and astWalker, but got: ${uri} and ${astWalker}`
@@ -87,9 +87,13 @@ class Indexer extends ServerBase {
         }
 
         astWalker.walkUntil((node) => {
-            this.methodsAndPublicationsIndexer.indexDefinitions({ uri, node });
+            this.methodsAndPublicationsIndexer.indexDefinitions({
+                uri,
+                node,
+                fileContent,
+            });
 
-            this.blazeIndexer.indexHelpers({ node, uri });
+            this.blazeIndexer.indexHelpers({ node, uri, fileContent });
             this.blazeIndexer.indexTemplateJsReferences({ node, uri });
         });
     }
@@ -143,7 +147,7 @@ class Indexer extends ServerBase {
         if (this.isFileSpacebarsHTML(uri)) {
             this.indexHtmlFile({ uri, astWalker, fileContent });
         } else {
-            this.indexJsFile({ uri, astWalker });
+            this.indexJsFile({ uri, astWalker, fileContent });
         }
     }
 

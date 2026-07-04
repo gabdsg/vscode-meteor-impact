@@ -66,7 +66,15 @@ class BlazeIndexer {
         }
     }
 
-    addHelpersToMap({ templateName, helperName, value, uri, kind, key }) {
+    addHelpersToMap({
+        templateName,
+        helperName,
+        value,
+        uri,
+        kind,
+        key,
+        signature,
+    }) {
         this.templateIndexMap[templateName] =
             this.templateIndexMap[templateName] || {};
 
@@ -90,6 +98,7 @@ class BlazeIndexer {
             uri,
             keyLoc: key?.loc,
             keyIsLiteral: key?.type === NODE_TYPES.LITERAL,
+            signature,
         };
     }
 
@@ -126,8 +135,12 @@ class BlazeIndexer {
         return map[key].push({ node, uri, entryKey });
     }
 
-    indexGlobalHelpers({ node, uri }) {
-        const { NODE_TYPES, NODE_NAMES } = require("./ast-helpers");
+    indexGlobalHelpers({ node, uri, fileContent }) {
+        const {
+            NODE_TYPES,
+            NODE_NAMES,
+            extractFunctionSignature,
+        } = require("./ast-helpers");
         const { TEMPLATE_CALLERS } = require("./constants");
 
         const callee = node.callee;
@@ -138,7 +151,7 @@ class BlazeIndexer {
         )
             return;
 
-        const [helperNameArgument] = node.arguments || [];
+        const [helperNameArgument, helperFunction] = node.arguments || [];
         if (
             helperNameArgument?.type !== NODE_TYPES.LITERAL ||
             typeof helperNameArgument.value !== "string"
@@ -151,6 +164,7 @@ class BlazeIndexer {
             start,
             end,
             uri,
+            signature: extractFunctionSignature(helperFunction, fileContent),
         };
     }
 
@@ -194,8 +208,9 @@ class BlazeIndexer {
         });
     }
 
-    indexHelpers({ node, uri }) {
-        const { NODE_TYPES } = require("./ast-helpers");
+    indexHelpers({ node, uri, fileContent }) {
+        const { NODE_TYPES, extractFunctionSignature } =
+            require("./ast-helpers");
 
         if (!node || node.type !== NODE_TYPES.CALL_EXPRESSION) {
             return;
@@ -206,7 +221,7 @@ class BlazeIndexer {
         const callee = node.callee;
         if (!callee || callee.type !== NODE_TYPES.MEMBER_EXPRESSION) return;
 
-        this.indexGlobalHelpers({ node, uri });
+        this.indexGlobalHelpers({ node, uri, fileContent });
 
         // Helpers and events maps have the same shape and are indexed alike.
         const caller = callee.property.name;
@@ -245,6 +260,10 @@ class BlazeIndexer {
                     uri,
                     kind: caller,
                     key,
+                    signature: extractFunctionSignature(
+                        prop.value,
+                        fileContent
+                    ),
                 });
 
                 if (caller === TEMPLATE_CALLERS.EVENTS) {

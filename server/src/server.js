@@ -15,6 +15,7 @@ const { HtmlFeaturesProvider } = require("./html-features-provider");
 const { RenameProvider } = require("./rename-provider");
 const { CodeActionsProvider } = require("./code-actions-provider");
 const { SemanticTokensProvider } = require("./semantic-tokens-provider");
+const { SignatureHelpProvider } = require("./signature-help-provider");
 const { Indexer } = require("./indexer");
 
 class ServerInstance {
@@ -105,6 +106,12 @@ class ServerInstance {
                 this.rootUri,
                 this.indexer
             );
+            this.signatureHelpProvider = new SignatureHelpProvider(
+                this.connection,
+                this.documents,
+                this.rootUri,
+                this.indexer
+            );
 
             return {
                 capabilities: {
@@ -128,6 +135,9 @@ class ServerInstance {
                     completionProvider: {
                         resolveProvider: "true",
                         triggerCharacters: ["."],
+                    },
+                    signatureHelpProvider: {
+                        triggerCharacters: [" ", "(", ","],
                     },
                 },
             };
@@ -171,6 +181,9 @@ class ServerInstance {
         );
         this.connection.languages.semanticTokens.on((...params) =>
             this.semanticTokensProvider.onSemanticTokensRequest(...params)
+        );
+        this.connection.onSignatureHelp((...params) =>
+            this.signatureHelpProvider.onSignatureHelpRequest(...params)
         );
         this.connection.onPrepareRename((...params) =>
             this.renameProvider.onPrepareRenameRequest(...params)

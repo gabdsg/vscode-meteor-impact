@@ -49,7 +49,7 @@ class MethodsAndPublicationsIndexer {
         this.usageMap[value].push({ node, uri, entryKey });
     }
 
-    addDefinitionToMap({ node, isMethod = false, uri }) {
+    addDefinitionToMap({ node, isMethod = false, uri, signature }) {
         const { NODE_TYPES } = require("./ast-helpers");
 
         if (
@@ -60,7 +60,7 @@ class MethodsAndPublicationsIndexer {
         }
 
         const toAdd = isMethod ? this.methodsMap : this.publicationsMap;
-        toAdd[node.value || node.name] = { node, uri };
+        toAdd[node.value || node.name] = { node, uri, signature };
 
         return true;
     }
@@ -208,7 +208,7 @@ class MethodsAndPublicationsIndexer {
         this.addUsage({ node, uri });
     }
 
-    indexDefinitions({ uri, node }) {
+    indexDefinitions({ uri, node, fileContent }) {
         if (!node || !uri) {
             throw new Error(
                 `Expected to receive node and uri, but got: ${node} and ${uri}`
@@ -243,22 +243,37 @@ class MethodsAndPublicationsIndexer {
             node,
             isMethod,
             uri,
+            fileContent,
         });
     }
 
-    handleStringLiterals({ node, isMethod, uri }) {
+    handleStringLiterals({ node, isMethod, uri, fileContent }) {
         const nodeArguments = node.arguments;
         if (!Array.isArray(nodeArguments) || !nodeArguments.length) {
             return;
         }
 
-        const { NODE_TYPES } = require("./ast-helpers");
+        const { NODE_TYPES, extractFunctionSignature } =
+            require("./ast-helpers");
         const { METEOR_SUPPORTED_PACKAGES_IDENTIFIER } = require("./constants");
 
-        for (const arg of nodeArguments) {
+        for (let i = 0; i < nodeArguments.length; i++) {
+            const arg = nodeArguments[i];
+
             // If it's not for methods, and we already found the string literal,
-            // then we have the publication name.
-            if (!isMethod && this.addDefinitionToMap({ node: arg, uri })) {
+            // then we have the publication name. The handler function is the
+            // next argument.
+            if (
+                !isMethod &&
+                this.addDefinitionToMap({
+                    node: arg,
+                    uri,
+                    signature: extractFunctionSignature(
+                        nodeArguments[i + 1],
+                        fileContent
+                    ),
+                })
+            ) {
                 break;
             }
 
@@ -287,6 +302,7 @@ class MethodsAndPublicationsIndexer {
                     node: isValidatedMethod ? value : key,
                     isMethod,
                     uri,
+                    signature: extractFunctionSignature(value, fileContent),
                 });
             }
         }
