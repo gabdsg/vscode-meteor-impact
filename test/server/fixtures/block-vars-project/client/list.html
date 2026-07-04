@@ -1,0 +1,14 @@
+<template name="list">
+    {{#each person in people}}
+        <div>{{person.name}} {{formatAge person}}</div>
+        <i>{{person "x"}}</i>
+    {{/each}}
+    {{#let total=peopleCount label="People"}}
+        <span>{{total}} {{label}}</span>
+    {{/let}}
+    {{> row}}
+</template>
+
+<template name="row">
+    <div>{{rowTitle}}</div>
+</template>

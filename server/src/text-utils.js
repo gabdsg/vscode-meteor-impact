@@ -60,9 +60,65 @@ const getWrappingTemplateName = (content, offset) => {
     return current;
 };
 
+const BLOCK_TAG_REGEX = /\{\{#([\w$]+)[^{}]*?\}\}|\{\{\/([\w$]+)\s*\}\}/g;
+const EACH_IN_REGEX = /^\{\{#each\s+([\w$]+)\s+in\s/;
+const LET_BINDING_REGEX = /([\w$]+)\s*=/g;
+
+/**
+ * Variables bound by the {{#each x in ...}} and {{#let a=... b=...}}
+ * blocks wrapping the given offset. Text-based, so it works while typing;
+ * a block that is still unclosed scopes until the end of the file.
+ */
+const getBlockVariablesAtOffset = (content, offset) => {
+    const stack = [];
+    const variables = [];
+
+    const bindingsOf = (tagText, blockName) => {
+        if (blockName === "each") {
+            const eachInMatch = tagText.match(EACH_IN_REGEX);
+            return eachInMatch ? [eachInMatch[1]] : [];
+        }
+
+        if (blockName === "let") {
+            return [...tagText.matchAll(LET_BINDING_REGEX)].map(
+                ([, name]) => name
+            );
+        }
+
+        return [];
+    };
+
+    for (const match of content.matchAll(BLOCK_TAG_REGEX)) {
+        if (match.index >= offset) break;
+
+        const openName = match[1];
+        if (openName) {
+            stack.push({
+                name: openName,
+                bindings: bindingsOf(match[0], openName),
+            });
+            continue;
+        }
+
+        // Closing tag: pop up to (and including) the matching open.
+        const closeName = match[2];
+        const openIndex = stack.map(({ name }) => name).lastIndexOf(closeName);
+        if (openIndex !== -1) stack.splice(openIndex);
+    }
+
+    for (const { name, bindings } of stack) {
+        for (const binding of bindings) {
+            variables.push({ name: binding, blockName: name });
+        }
+    }
+
+    return variables;
+};
+
 module.exports = {
     positionToOffset,
     offsetToLoc,
     getTemplateTags,
     getWrappingTemplateName,
+    getBlockVariablesAtOffset,
 };

@@ -229,7 +229,8 @@ class CompletionProvider extends ServerBase {
         } = require("vscode-languageserver");
 
         // Inside {{...}} or {{#block ...}}: offer the helpers of the
-        // wrapping template plus the global helpers.
+        // wrapping template, the global helpers and the variables bound by
+        // wrapping {{#each x in ...}} / {{#let}} blocks.
         const templateName = getWrappingTemplateName(content, offset);
         const scopedHelpers =
             (!!templateName &&
@@ -237,7 +238,16 @@ class CompletionProvider extends ServerBase {
                     ?.helpers) ||
             {};
 
+        const { getBlockVariablesAtOffset } = require("./text-utils");
+
         return [
+            ...getBlockVariablesAtOffset(content, offset).map(
+                ({ name, blockName }) => ({
+                    ...CompletionItem.create(name),
+                    kind: CompletionItemKind.Variable,
+                    detail: `Bound by wrapping {{#${blockName}}}`,
+                })
+            ),
             ...Object.keys(scopedHelpers).map((helperName) => ({
                 ...CompletionItem.create(helperName),
                 kind: CompletionItemKind.Function,

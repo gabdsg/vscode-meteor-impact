@@ -118,15 +118,24 @@ class DiagnosticsProvider extends ServerBase {
                 const helperName = path.parts[0];
                 if (!helperName || path.original.startsWith("@")) return;
 
+                const pathOffset = positionToOffset(fileContent, {
+                    line: path.loc.start.line - 1,
+                    character: path.loc.start.column,
+                });
+
                 const wrappingTemplateName = getWrappingTemplateName(
                     fileContent,
-                    positionToOffset(fileContent, {
-                        line: path.loc.start.line - 1,
-                        character: path.loc.start.column,
-                    })
+                    pathOffset
                 );
 
+                const { getBlockVariablesAtOffset } = require("./text-utils");
+                const isBlockVariable = getBlockVariablesAtOffset(
+                    fileContent,
+                    pathOffset
+                ).some(({ name }) => name === helperName);
+
                 const isResolvable =
+                    isBlockVariable ||
                     (!!wrappingTemplateName &&
                         !!templateIndexMap[wrappingTemplateName]?.helpers?.[
                             helperName
