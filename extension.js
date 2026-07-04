@@ -30,7 +30,39 @@ const {
 } = require("./src/generate-settings-types");
 const { registerBlazeBlockAutoClose } = require("./src/blaze-auto-close");
 
-const createOrUpdateJsConfigFile = () => {
+let notifiedAboutTsconfig = false;
+
+const hasTsconfig = async () => {
+    try {
+        return !!(await vscode.workspace.fs.stat(
+            vscode.Uri.joinPath(
+                vscode.workspace.workspaceFolders[0].uri,
+                "tsconfig.json"
+            )
+        ));
+    } catch (e) {
+        return false;
+    }
+};
+
+const createOrUpdateJsConfigFile = async () => {
+    // A TypeScript project owns its own compiler config: writing a
+    // jsconfig.json next to a tsconfig.json is at best ignored and at
+    // worst confusing. zodern:types covers the meteor package paths there.
+    if (await hasTsconfig()) {
+        console.log(
+            "tsconfig.json detected, skipping jsconfig.json generation."
+        );
+        if (!notifiedAboutTsconfig) {
+            notifiedAboutTsconfig = true;
+            vscode.window.setStatusBarMessage(
+                "Meteor Impact: tsconfig.json detected — jsconfig.json generation skipped.",
+                8000
+            );
+        }
+        return;
+    }
+
     generateBaseJsConfig();
     addImportedPackagesToJsConfig();
     addCustomPackageOptionsToJsConfig();
