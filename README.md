@@ -55,6 +55,14 @@ Works in `.js`, `.ts` and Spacebars `.html` files:
     Meteor lifecycle/method/publication snippets in JS/TS.
 -   **.meteor/packages intelligence**: hover shows the resolved version,
     completion offers installed packages.
+-   **Package awareness**: templates and global helpers provided by
+    installed packages (e.g. `{{> loginButtons}}`) resolve in definitions,
+    completion, hover and diagnostics.
+-   **Meteor Explorer**: an activity bar panel with an app-wide overview
+    (templates/helpers/events/methods/publications, with unused markers)
+    and the template inclusion hierarchy.
+-   **Block auto-close**: typing `{{#if ...}}` (or pressing Enter after
+    it) inserts the matching `{{/if}}`.
 
 The index follows unsaved edits incrementally, so results stay fresh while
 you type.

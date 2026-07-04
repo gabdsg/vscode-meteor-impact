@@ -33,10 +33,9 @@ Rounds A and B are implemented too:
 
 ### Round C - bigger bets
 
-- **Package awareness**: read `.meteor/versions` and index the .html/.js
-  sources of installed packages from `~/.meteor/packages` read-only, so
-  package templates (e.g. `loginButtons`) get go-to-definition and stop
-  needing the "may be provided by a package" hedge in diagnostics.
+- ~~Package awareness~~ (implemented via the local build bundles in
+  `.meteor/local/build`: package templates/global helpers resolve in
+  definitions, completion, hover and diagnostics, read-only)
 - **Data context inference** (full version): run the TypeScript checker
   against code-behind files to know helper return types and offer property
   completions inside `{{#each}}`/`{{#with}}` blocks. Consider building it

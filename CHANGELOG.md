@@ -6,6 +6,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [2.0.0] - 04/07/26
 
+-   Add the Meteor Explorer activity bar panel: app-wide overview and template inclusion hierarchy, click-to-jump, unused markers.
+-   Resolve templates/global helpers provided by installed packages (scanned from the local build) in definitions, completion, hover and diagnostics; stop indexing .meteor/** as app sources.
+-   Auto-close Blaze block tags ({{#if ...}} inserts {{/if}}).
 -   Flag calls to unknown methods/publications with create-stub quick fixes, and hint unused ones.
 -   Add "Go to Template Counterpart" (Alt+O) cycling html -> code-behind -> style.
 -   Add "Rename Blaze Template" renaming the folder, files, imports and all usages together.
