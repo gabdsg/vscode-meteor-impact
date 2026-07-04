@@ -243,6 +243,32 @@ describe("Indexer configuration", () => {
     });
 });
 
+describe("Indexing notifications", () => {
+    it("emits busy/done with index stats around a reindex", async () => {
+        const { Indexer } = require("../../server/src/indexer");
+        const notifications = [];
+
+        const indexer = new Indexer({
+            rootUri: fixtureUri("basic-project", ""),
+            serverInstance: {
+                sendNotification: (method, params) =>
+                    notifications.push({ method, params }),
+            },
+            documentsInstance: documentsInstanceMock,
+        });
+
+        await indexer.reindex();
+
+        const indexing = notifications.filter(
+            ({ method }) => method === "meteorImpact/indexing"
+        );
+        assert.strictEqual(indexing.length, 2);
+        assert.strictEqual(indexing[0].params.busy, true);
+        assert.strictEqual(indexing[1].params.busy, false);
+        assert.strictEqual(indexing[1].params.templates, 2);
+    });
+});
+
 describe("ServerBase utilities", () => {
     it("reads open buffers through the documents instance", () => {
         const base = new ServerBase(

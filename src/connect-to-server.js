@@ -2,6 +2,31 @@ let client;
 let extractTemplateCommandDisposable;
 let renameTemplateCommandDisposable;
 let explorerDisposables = [];
+let statusBarItem;
+
+// A small activity-bar presence: spinner while the project (re)indexes,
+// a rocket with index stats afterwards.
+const setupIndexingStatusBar = () => {
+    const { window, StatusBarAlignment } = require("vscode");
+
+    statusBarItem =
+        statusBarItem ||
+        window.createStatusBarItem(StatusBarAlignment.Left, 0);
+
+    client.onNotification(
+        "meteorImpact/indexing",
+        ({ busy, templates, methods, publications } = {}) => {
+            if (busy) {
+                statusBarItem.text = "$(sync~spin) Meteor: indexing...";
+                statusBarItem.tooltip = "Meteor Impact is indexing the project";
+            } else {
+                statusBarItem.text = "$(rocket) Meteor";
+                statusBarItem.tooltip = `Meteor Impact — ${templates} templates, ${methods} methods, ${publications} publications indexed`;
+            }
+            statusBarItem.show();
+        }
+    );
+};
 
 /**
  * The "Extract selection to template..." code action carries this command:
@@ -80,6 +105,7 @@ const connectToLanguageServer = async (asAbsolutePath) => {
     // Start the client. This will also launch the server
     await client.start();
     registerExtractTemplateCommand();
+    setupIndexingStatusBar();
 
     const { commands } = require("vscode");
     const { renameTemplate } = require("./rename-template");
@@ -103,6 +129,8 @@ const stopServer = () => {
     renameTemplateCommandDisposable = undefined;
     explorerDisposables.forEach((disposable) => disposable?.dispose?.());
     explorerDisposables = [];
+    statusBarItem?.dispose?.();
+    statusBarItem = undefined;
 
     if (!client) return;
     client.stop();

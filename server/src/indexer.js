@@ -335,12 +335,30 @@ class Indexer extends ServerBase {
 
     async reindex() {
         console.info(`* Indexing project: ${this.rootUri}`);
-        [this.blazeIndexer, this.methodsAndPublicationsIndexer].forEach((i) =>
-            i?.reset?.()
-        );
-        // Parse errors surface as in-file diagnostics after the reindex.
-        await this.loadSources();
-        console.info("* Indexing completed.");
+        this.serverInstance?.sendNotification?.("meteorImpact/indexing", {
+            busy: true,
+        });
+
+        try {
+            [this.blazeIndexer, this.methodsAndPublicationsIndexer].forEach(
+                (i) => i?.reset?.()
+            );
+            // Parse errors surface as in-file diagnostics after the reindex.
+            await this.loadSources();
+            console.info("* Indexing completed.");
+        } finally {
+            this.serverInstance?.sendNotification?.("meteorImpact/indexing", {
+                busy: false,
+                templates: Object.keys(this.blazeIndexer.templateIndexMap)
+                    .length,
+                methods: Object.keys(
+                    this.methodsAndPublicationsIndexer.methodsMap
+                ).length,
+                publications: Object.keys(
+                    this.methodsAndPublicationsIndexer.publicationsMap
+                ).length,
+            });
+        }
     }
 }
 
