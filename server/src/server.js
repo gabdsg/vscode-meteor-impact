@@ -17,6 +17,7 @@ const { CodeActionsProvider } = require("./code-actions-provider");
 const { SemanticTokensProvider } = require("./semantic-tokens-provider");
 const { SignatureHelpProvider } = require("./signature-help-provider");
 const { OverviewProvider } = require("./overview-provider");
+const { InlayHintsProvider } = require("./inlay-hints-provider");
 const { Indexer } = require("./indexer");
 
 class ServerInstance {
@@ -119,6 +120,12 @@ class ServerInstance {
                 this.rootUri,
                 this.indexer
             );
+            this.inlayHintsProvider = new InlayHintsProvider(
+                this.connection,
+                this.documents,
+                this.rootUri,
+                this.indexer
+            );
 
             return {
                 capabilities: {
@@ -148,6 +155,7 @@ class ServerInstance {
                     signatureHelpProvider: {
                         triggerCharacters: [" ", "(", ","],
                     },
+                    inlayHintProvider: true,
                 },
             };
         });
@@ -202,6 +210,9 @@ class ServerInstance {
         // Index summary for the Meteor Explorer views.
         this.connection.onRequest("meteorImpact/appOverview", () =>
             this.overviewProvider.onAppOverviewRequest()
+        );
+        this.connection.languages.inlayHint.on((...params) =>
+            this.inlayHintsProvider.onInlayHintsRequest(...params)
         );
         this.connection.languages.semanticTokens.on((...params) =>
             this.semanticTokensProvider.onSemanticTokensRequest(...params)
