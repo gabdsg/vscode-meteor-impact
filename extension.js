@@ -22,6 +22,9 @@ const {
     goToCounterpart,
     enableTemplateFileNesting,
 } = require("./src/file-navigation");
+const {
+    registerMeteorPackagesFileProviders,
+} = require("./src/meteor-packages-file");
 
 const createOrUpdateJsConfigFile = () => {
     generateBaseJsConfig();
@@ -167,7 +170,8 @@ async function activate(context) {
         regenerateLaunchJsonDisposable,
         createTemplateDisposable,
         goToCounterpartDisposable,
-        fileNestingDisposable
+        fileNestingDisposable,
+        ...registerMeteorPackagesFileProviders()
     );
 }
 
