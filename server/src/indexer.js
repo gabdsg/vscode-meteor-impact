@@ -96,46 +96,92 @@ class Indexer extends ServerBase {
         });
     }
 
-    async loadSources(globs = ["**/**{.js,.ts,.html}"]) {
-        const uris = await this.findUris(globs);
-
+    parseFile({ uri, fileContent }) {
         const { AstWalker, parseJsSource } = require("./ast-helpers");
         const { SpacebarsCompiler } = require("@blastjs/spacebars-compiler");
-
         const { parse: handlebarsParser } = require("@handlebars/parser");
+
+        const extension = this.getFileExtension(uri);
+        const isFileHtml = this.isFileSpacebarsHTML(uri);
+
+        const astWalker = new AstWalker(
+            fileContent,
+            isFileHtml ? handlebarsParser : parseJsSource,
+            isFileHtml ? {} : { extension }
+        );
+
+        // Also index the htmlJs representation.
+        const htmlJs = isFileHtml && SpacebarsCompiler.parse(fileContent);
+
+        return {
+            extension,
+            astWalker,
+            uri,
+            htmlJs,
+            fileContent,
+        };
+    }
+
+    indexFileInfo(fileInfo) {
+        const { uri, astWalker } = fileInfo;
+
+        if (this.isFileSpacebarsHTML(uri)) {
+            this.indexHtmlFile({ uri, astWalker });
+        } else {
+            this.indexJsFile({ uri, astWalker });
+        }
+    }
+
+    /**
+     * Reindex a single file without re-globbing/re-parsing the rest of the
+     * project. Uses the open buffer content when available, so the index
+     * follows unsaved edits. Returns false when the file can't be parsed,
+     * in which case the previous index for it is kept.
+     */
+    reindexFile(uriLike) {
+        const uri = this.parseUri(uriLike);
+        const extension = this.getFileExtension(uri);
+        if (![".js", ".ts", ".html"].includes(extension)) return false;
+
+        // Parse before dropping anything, so a file that is broken beyond
+        // error recovery keeps its previous (stale but usable) index.
+        let fileInfo;
+        try {
+            fileInfo = this.parseFile({
+                uri,
+                fileContent: this.getFileContent(uri),
+            });
+        } catch (e) {
+            console.warn(
+                `Incremental reindex skipped for ${uri.fsPath}. ${e}`
+            );
+            return false;
+        }
+
+        [this.blazeIndexer, this.methodsAndPublicationsIndexer].forEach((i) =>
+            i?.removeUri?.(uri.fsPath)
+        );
+
+        this.indexFileInfo(fileInfo);
+        this.sources[uri.fsPath] = fileInfo;
+
+        return true;
+    }
+
+    async loadSources(globs = ["**/**{.js,.ts,.html}"]) {
+        const uris = await this.findUris(globs);
 
         const parsingErrors = [];
         const results = await Promise.all(
             uris.map(async (uri) => {
                 try {
-                    const extension = this.getFileExtension(uri);
-                    const isFileHtml = this.isFileSpacebarsHTML(uri);
-
-                    const fileContent = await this.getFileContentPromise(uri);
-
-                    const astWalker = new AstWalker(
-                        fileContent,
-                        isFileHtml ? handlebarsParser : parseJsSource,
-                        isFileHtml ? {} : { extension }
-                    );
-
-                    // Also index the htmlJs representation.
-                    const htmlJs =
-                        isFileHtml && SpacebarsCompiler.parse(fileContent);
-
-                    if (isFileHtml) {
-                        this.indexHtmlFile({ uri, astWalker });
-                    } else {
-                        this.indexJsFile({ uri, astWalker });
-                    }
-
-                    return {
-                        extension,
-                        astWalker,
+                    const fileInfo = this.parseFile({
                         uri,
-                        htmlJs,
-                        fileContent,
-                    };
+                        fileContent: await this.getFileContentPromise(uri),
+                    });
+
+                    this.indexFileInfo(fileInfo);
+                    return fileInfo;
                 } catch (e) {
                     console.error(`Error parsing ${uri}. ${e}`);
                     parsingErrors.push({ uri, error: e });

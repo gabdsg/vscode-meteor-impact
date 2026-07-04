@@ -308,6 +308,30 @@ class MethodsAndPublicationsIndexer {
         return this.usageMap[key];
     }
 
+    /**
+     * Drop every entry that was indexed from the given file, so the file
+     * can be reindexed incrementally.
+     */
+    removeUri(fsPath) {
+        const matches = (uri) => uri?.fsPath === fsPath;
+
+        for (const map of [this.methodsMap, this.publicationsMap]) {
+            for (const [name, { uri }] of Object.entries(map)) {
+                if (matches(uri)) delete map[name];
+            }
+        }
+
+        for (const [key, entries] of Object.entries(this.usageMap)) {
+            const remaining = entries.filter(({ uri }) => !matches(uri));
+
+            if (!remaining.length) {
+                delete this.usageMap[key];
+            } else if (remaining.length !== entries.length) {
+                this.usageMap[key] = remaining;
+            }
+        }
+    }
+
     reset() {
         this.methodsMap = {};
         this.publicationsMap = {};

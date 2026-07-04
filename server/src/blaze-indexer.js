@@ -329,6 +329,66 @@ class BlazeIndexer {
         return this.templateIndexMap[_name] || {};
     }
 
+    /**
+     * Drop every entry that was indexed from the given file, so the file
+     * can be reindexed incrementally.
+     */
+    removeUri(fsPath) {
+        const matches = (uri) => uri?.fsPath === fsPath;
+
+        for (const [templateName, template] of Object.entries(
+            this.templateIndexMap
+        )) {
+            if (matches(template.uri)) {
+                delete template.node;
+                delete template.uri;
+            }
+
+            for (const kind of ["helpers", "events"]) {
+                for (const [name, entry] of Object.entries(
+                    template[kind] || {}
+                )) {
+                    if (matches(entry.uri)) delete template[kind][name];
+                }
+
+                if (template[kind] && !Object.keys(template[kind]).length) {
+                    delete template[kind];
+                }
+            }
+
+            if (matches(template.jsUri)) {
+                delete template.jsUri;
+
+                // Keep the inference working when helpers of this template
+                // remain indexed from another file.
+                const remainingHelper = Object.values(
+                    template.helpers || {}
+                )[0];
+                if (remainingHelper) template.jsUri = remainingHelper.uri;
+            }
+
+            if (!Object.keys(template).length) {
+                delete this.templateIndexMap[templateName];
+            }
+        }
+
+        for (const map of [this.htmlUsageMap, this.eventsMap]) {
+            for (const [key, entries] of Object.entries(map)) {
+                const remaining = entries.filter(({ uri }) => !matches(uri));
+
+                if (!remaining.length) {
+                    delete map[key];
+                } else if (remaining.length !== entries.length) {
+                    map[key] = remaining;
+                }
+            }
+        }
+
+        for (const [name, helper] of Object.entries(this.globalHelpersMap)) {
+            if (matches(helper.uri)) delete this.globalHelpersMap[name];
+        }
+    }
+
     reset() {
         this.templateIndexMap = {};
         this.htmlUsageMap = {};

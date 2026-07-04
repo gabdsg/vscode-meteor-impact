@@ -102,11 +102,14 @@ class ServerInstance {
             };
         });
 
-        // Reindex on file changes
+        // Created/deleted/renamed files change the project shape: full
+        // reindex. Content edits only reindex the changed file.
         this.connection.onDidChangeWatchedFiles(() =>
             this.scheduleReindexing()
         );
-        this.documents.onDidChangeContent(() => this.scheduleReindexing());
+        this.documents.onDidChangeContent(({ document }) =>
+            this.scheduleFileReindexing(document.uri)
+        );
 
         this.connection.onDefinition((...params) =>
             this.definitionProvider.onDefinitionRequest(...params)
@@ -138,6 +141,35 @@ class ServerInstance {
         this.documents.listen(this.connection);
 
         this.connection.listen();
+    }
+
+    scheduleFileReindexing(uri) {
+        // Before the initial index there is nothing to update incrementally.
+        if (!this.indexer?.loaded) return;
+
+        this.fileReindexingTimeouts = this.fileReindexingTimeouts || new Map();
+
+        const existingTimeout = this.fileReindexingTimeouts.get(uri);
+        if (existingTimeout) clearTimeout(existingTimeout);
+
+        const timeoutMs = 300;
+        this.fileReindexingTimeouts.set(
+            uri,
+            setTimeout(() => {
+                this.fileReindexingTimeouts.delete(uri);
+
+                try {
+                    if (this.indexer.reindexFile(uri)) {
+                        this.diagnosticsProvider?.publish();
+                    }
+                } catch (err) {
+                    console.error(
+                        `Failed to reindex ${uri}: ${err.message}. Falling back to full reindex.`
+                    );
+                    this.scheduleReindexing();
+                }
+            }, timeoutMs)
+        );
     }
 
     scheduleReindexing() {
