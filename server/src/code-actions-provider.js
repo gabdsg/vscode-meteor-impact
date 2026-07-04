@@ -48,6 +48,16 @@ class CodeActionsProvider extends ServerBase {
                 this.createTemplateAction({ uri, diagnostic }),
             "create-helper": () => this.createHelperAction({ uri, diagnostic }),
             "remove-helper": () => this.removeHelperAction({ diagnostic }),
+            "create-method": () =>
+                this.createMethodOrPublicationAction({
+                    diagnostic,
+                    isMethod: true,
+                }),
+            "create-publication": () =>
+                this.createMethodOrPublicationAction({
+                    diagnostic,
+                    isMethod: false,
+                }),
         };
 
         return handlers[diagnostic.data.kind]?.();
@@ -482,6 +492,41 @@ class CodeActionsProvider extends ServerBase {
             })
             .join("\n")
             .replace(/^\n+|\n+$/g, "");
+    }
+
+    // Stub goes to a file already defining methods/publications, so the
+    // fix is only offered when such a file exists.
+    createMethodOrPublicationAction({ diagnostic, isMethod }) {
+        const { TextEdit } = require("vscode-languageserver");
+        const { name } = diagnostic.data;
+
+        const { methodsMap, publicationsMap } =
+            this.indexer.methodsAndPublicationsIndexer;
+        const existingDefinition = Object.values(
+            isMethod ? methodsMap : publicationsMap
+        ).find(({ uri }) => !!uri);
+        if (!existingDefinition) return;
+
+        const targetUri = existingDefinition.uri;
+        const content = this.getFileContent(targetUri);
+
+        const methodKey = IDENTIFIER_REGEX.test(name) ? name : `"${name}"`;
+        const stub = isMethod
+            ? `${
+                  content.endsWith("\n") ? "" : "\n"
+              }\nMeteor.methods({\n    ${methodKey}() {\n\n    },\n});\n`
+            : `${
+                  content.endsWith("\n") ? "" : "\n"
+              }\nMeteor.publish("${name}", function () {\n    return [];\n});\n`;
+
+        return this.quickFix({
+            title: `Create ${
+                isMethod ? "method" : "publication"
+            } "${name}"`,
+            diagnostic,
+            editUri: targetUri,
+            edits: [TextEdit.insert(this.endOfFilePosition(content), stub)],
+        });
     }
 
     removeHelperAction({ diagnostic }) {

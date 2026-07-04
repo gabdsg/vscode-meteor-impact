@@ -56,8 +56,106 @@ class DiagnosticsProvider extends ServerBase {
         this.checkUnresolvedSymbols(diagnosticsByUri, htmlSources);
         this.checkDuplicateTemplates(diagnosticsByUri, templateTagsByFile);
         this.checkUnusedHelpers(diagnosticsByUri);
+        this.checkMethodAndPublicationCalls(diagnosticsByUri);
+        this.checkUnusedMethodsAndPublications(diagnosticsByUri);
 
         return diagnosticsByUri;
+    }
+
+    /**
+     * Meteor.call/callAsync/apply/applyAsync and .subscribe calls whose
+     * name literal matches no indexed method/publication. Package-provided
+     * names can't be seen, so these are warnings, never errors.
+     */
+    checkMethodAndPublicationCalls(diagnosticsByUri) {
+        const { NODE_TYPES } = require("./ast-helpers");
+        const { DiagnosticSeverity } = require("vscode-languageserver");
+
+        const { methodsMap, publicationsMap } =
+            this.indexer.methodsAndPublicationsIndexer;
+
+        const METHOD_CALLERS = ["call", "callAsync", "apply", "applyAsync"];
+        // Limit .subscribe receivers to the Meteor-looking ones, so event
+        // emitter/observable subscribe calls aren't flagged.
+        const isSubscribeReceiver = (object) =>
+            object?.type === "ThisExpression" ||
+            (object?.type === NODE_TYPES.IDENTIFIER &&
+                (object.name === "Meteor" ||
+                    /instance|template/i.test(object.name)));
+
+        const jsSources = Object.values(this.indexer.getSources()).filter(
+            ({ extension }) => extension !== ".html"
+        );
+
+        for (const { astWalker, uri } of jsSources) {
+            astWalker.walkUntil((node) => {
+                if (node?.type !== NODE_TYPES.CALL_EXPRESSION) return;
+
+                const callee = node.callee;
+                if (callee?.type !== NODE_TYPES.MEMBER_EXPRESSION) return;
+
+                const propertyName = callee.property?.name;
+                const isMethodCall =
+                    METHOD_CALLERS.includes(propertyName) &&
+                    callee.object?.type === NODE_TYPES.IDENTIFIER &&
+                    callee.object.name === "Meteor";
+                const isSubscription =
+                    propertyName === "subscribe" &&
+                    isSubscribeReceiver(callee.object);
+                if (!isMethodCall && !isSubscription) return;
+
+                const [nameArgument] = node.arguments || [];
+                if (
+                    nameArgument?.type !== NODE_TYPES.LITERAL ||
+                    typeof nameArgument.value !== "string"
+                ) {
+                    return;
+                }
+
+                const map = isMethodCall ? methodsMap : publicationsMap;
+                if (map[nameArgument.value]) return;
+
+                this.addDiagnostic(diagnosticsByUri, uri, {
+                    severity: DiagnosticSeverity.Warning,
+                    range: this.createRange(nameArgument.loc),
+                    message: `${
+                        isMethodCall ? "Method" : "Publication"
+                    } "${nameArgument.value}" is not defined in this project (it may be provided by a package).`,
+                    data: {
+                        kind: isMethodCall
+                            ? "create-method"
+                            : "create-publication",
+                        name: nameArgument.value,
+                    },
+                });
+            });
+        }
+    }
+
+    checkUnusedMethodsAndPublications(diagnosticsByUri) {
+        const {
+            DiagnosticSeverity,
+            DiagnosticTag,
+        } = require("vscode-languageserver");
+
+        const { methodsMap, publicationsMap, usageMap } =
+            this.indexer.methodsAndPublicationsIndexer;
+
+        for (const [map, label, usage] of [
+            [methodsMap, "Method", "called"],
+            [publicationsMap, "Publication", "subscribed to"],
+        ]) {
+            for (const [name, { node, uri }] of Object.entries(map)) {
+                if (usageMap[name] || !uri) continue;
+
+                this.addDiagnostic(diagnosticsByUri, uri, {
+                    severity: DiagnosticSeverity.Hint,
+                    tags: [DiagnosticTag.Unnecessary],
+                    range: this.createRange(node.loc),
+                    message: `${label} "${name}" is never ${usage} in this project.`,
+                });
+            }
+        }
     }
 
     checkUnresolvedSymbols(diagnosticsByUri, htmlSources) {
