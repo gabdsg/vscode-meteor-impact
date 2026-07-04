@@ -60,7 +60,8 @@ Works in `.js`, `.ts` and Spacebars `.html` files:
     completion, hover and diagnostics.
 -   **Meteor Explorer**: an activity bar panel with an app-wide overview
     (templates/helpers/events/methods/publications, with unused markers)
-    and the template inclusion hierarchy.
+    and the template inclusion hierarchy - it follows the active editor,
+    and has a search filter plus a current-file scope toggle.
 -   **Block auto-close**: typing `{{#if ...}}` (or pressing Enter after
     it) inserts the matching `{{/if}}`.
 

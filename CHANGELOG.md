@@ -6,6 +6,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [2.0.0] - 04/07/26
 
+-   Meteor Explorer: reveal the active file's template on editor switch, a current-file scope toggle, and a search filter (prunes both trees, keeping hierarchy paths that lead to matches).
 -   Add the Meteor Explorer activity bar panel: app-wide overview and template inclusion hierarchy, click-to-jump, unused markers.
 -   Resolve templates/global helpers provided by installed packages (scanned from the local build) in definitions, completion, hover and diagnostics; stop indexing .meteor/** as app sources.
 -   Auto-close Blaze block tags ({{#if ...}} inserts {{/if}}).

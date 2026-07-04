@@ -137,6 +137,24 @@
                 "command": "meteorImpact.refreshExplorer",
                 "title": "Refresh Meteor Explorer",
                 "icon": "$(refresh)"
+            },
+            {
+                "category": "Commands",
+                "command": "meteorImpact.searchExplorer",
+                "title": "Search Meteor Explorer",
+                "icon": "$(search)"
+            },
+            {
+                "category": "Commands",
+                "command": "meteorImpact.explorerScopeToFile",
+                "title": "Show Current File Only",
+                "icon": "$(filter)"
+            },
+            {
+                "category": "Commands",
+                "command": "meteorImpact.explorerScopeToAll",
+                "title": "Show Whole App",
+                "icon": "$(filter-filled)"
             }
         ],
         "viewsContainers": {
@@ -188,9 +206,24 @@
             ],
             "view/title": [
                 {
+                    "command": "meteorImpact.searchExplorer",
+                    "when": "view == meteorImpactOverview || view == meteorImpactHierarchy",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "meteorImpact.explorerScopeToFile",
+                    "when": "view == meteorImpactOverview && !meteorImpact.explorerScopedToFile",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "meteorImpact.explorerScopeToAll",
+                    "when": "view == meteorImpactOverview && meteorImpact.explorerScopedToFile",
+                    "group": "navigation@2"
+                },
+                {
                     "command": "meteorImpact.refreshExplorer",
                     "when": "view == meteorImpactOverview || view == meteorImpactHierarchy",
-                    "group": "navigation"
+                    "group": "navigation@3"
                 }
             ]
         },
