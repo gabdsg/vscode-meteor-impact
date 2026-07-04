@@ -1,7 +1,7 @@
 {
 	"name": "meteor-impact-language-server",
 	"description": "Meteor Language Server",
-	"version": "1.0.1",
+	"version": "2.0.0",
 	"contributors": [
 		{
 			"name": "Matheus Castro"

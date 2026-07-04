@@ -4,7 +4,7 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [04/07/26]
+## [2.0.0] - 04/07/26
 
 -   Rename the extension to **Meteor Impact** (`gabdsg.meteor-impact`), forked from Meteor Toolbox. BREAKING: all identifiers changed - commands are now `meteorImpact.*` and the settings key is `conf.settingsEditor.meteorImpact` (update your settings.json/keybindings), the diagnostics source is `meteor-impact` and the TS server plugin is `typescript-meteor-impact-plugin`.
 -   Add a "Create Blaze Template" explorer context menu: scaffolds a folder with the template HTML, a .js or .ts code-behind (asked via prompt, importing the HTML/style and stubbing onCreated/helpers/events) and optionally a .less/.css file (less when the meteor less package is installed).
