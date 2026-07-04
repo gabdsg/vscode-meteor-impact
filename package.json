@@ -111,6 +111,23 @@
                 "category": "Commands",
                 "command": "meteorImpact.createTemplate",
                 "title": "Create Blaze Template"
+            },
+            {
+                "category": "Commands",
+                "command": "meteorImpact.goToCounterpart",
+                "title": "Go to Template Counterpart (html/code/style)"
+            },
+            {
+                "category": "Commands",
+                "command": "meteorImpact.enableTemplateFileNesting",
+                "title": "Nest Template Files Under Code-Behind"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "meteorImpact.goToCounterpart",
+                "key": "alt+o",
+                "when": "editorTextFocus && meteorImpact.isMeteorProject"
             }
         ],
         "menus": {

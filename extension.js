@@ -18,6 +18,10 @@ const {
     stopServer,
 } = require("./src/connect-to-server");
 const { createTemplate } = require("./src/create-template");
+const {
+    goToCounterpart,
+    enableTemplateFileNesting,
+} = require("./src/file-navigation");
 
 const createOrUpdateJsConfigFile = () => {
     generateBaseJsConfig();
@@ -59,6 +63,14 @@ async function activate(context) {
     const createTemplateDisposable = vscode.commands.registerCommand(
         "meteorImpact.createTemplate",
         createTemplate
+    );
+    const goToCounterpartDisposable = vscode.commands.registerCommand(
+        "meteorImpact.goToCounterpart",
+        goToCounterpart
+    );
+    const fileNestingDisposable = vscode.commands.registerCommand(
+        "meteorImpact.enableTemplateFileNesting",
+        enableTemplateFileNesting
     );
 
     const toggleAutoRunPackagesWatcherDisposable =
@@ -153,7 +165,9 @@ async function activate(context) {
         restartDisposer,
         clearMeteorBuildCacheDisposable,
         regenerateLaunchJsonDisposable,
-        createTemplateDisposable
+        createTemplateDisposable,
+        goToCounterpartDisposable,
+        fileNestingDisposable
     );
 }
 
