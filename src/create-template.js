@@ -24,9 +24,6 @@ const resolveTargetDirectory = async (clickedUri) => {
     return Uri.joinPath(clickedUri, "..");
 };
 
-const usesTypescript = () =>
-    exists(Uri.joinPath(workspace.workspaceFolders[0].uri, "tsconfig.json"));
-
 /**
  * Explorer context menu command: scaffold a new Blaze template folder with
  * <name>.html, <name>.js/.ts and optionally <name>.less/.css.
@@ -52,6 +49,16 @@ const createTemplate = async (clickedUri) => {
         return;
     }
 
+    const scriptPick = await window.showQuickPick(
+        [
+            { label: "JavaScript", description: `${name}.js`, extension: ".js" },
+            { label: "TypeScript", description: `${name}.ts`, extension: ".ts" },
+        ],
+        { placeHolder: "Language for the template code-behind" }
+    );
+    if (!scriptPick) return;
+    const scriptExtension = scriptPick.extension;
+
     // Style file: .less when the meteor less package is installed.
     const preferredStyleExtension = (await isUsingMeteorPackage("less"))
         ? ".less"
@@ -63,7 +70,6 @@ const createTemplate = async (clickedUri) => {
 
     const styleExtension =
         stylePick === "Yes" ? preferredStyleExtension : null;
-    const scriptExtension = (await usesTypescript()) ? ".ts" : ".js";
 
     const files = buildTemplateScaffolding({
         name,

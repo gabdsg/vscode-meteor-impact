@@ -6,7 +6,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [04/07/26]
 
--   Add a "Create Blaze Template" explorer context menu: scaffolds a folder with the template HTML, a .js/.ts code-behind (importing the HTML/style and stubbing onCreated/helpers/events) and optionally a .less/.css file (less when the meteor less package is installed).
+-   Add a "Create Blaze Template" explorer context menu: scaffolds a folder with the template HTML, a .js or .ts code-behind (asked via prompt, importing the HTML/style and stubbing onCreated/helpers/events) and optionally a .less/.css file (less when the meteor less package is installed).
 -   Add "Extract selection to template" refactoring: prompts for the template name, moves the selected HTML into a new template, replaces it with a partial (passing outer block variables as arguments), and moves or copies the helpers and events the selection uses.
 -   Add semantic highlighting for Spacebars: resolved helpers, templates, block keywords and block variables get distinct colors.
 -   Track `{{#each x in ...}}`/`{{#let}}` block variables: offered in completion, excluded from unresolved-helper diagnostics.
