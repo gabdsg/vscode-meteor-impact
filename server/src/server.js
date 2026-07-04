@@ -41,6 +41,7 @@ class ServerInstance {
                 rootUri: this.rootUri,
                 serverInstance: this.connection,
                 documentsInstance: this.documents,
+                enableIndexCache: true,
             });
 
             this.diagnosticsProvider = new DiagnosticsProvider(

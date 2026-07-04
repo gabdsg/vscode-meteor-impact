@@ -5,7 +5,12 @@ const {
 const { BlazeIndexer } = require("./blaze-indexer");
 
 class Indexer extends ServerBase {
-    constructor({ rootUri, serverInstance, documentsInstance }) {
+    constructor({
+        rootUri,
+        serverInstance,
+        documentsInstance,
+        enableIndexCache = false,
+    }) {
         if (!rootUri) {
             throw new Error("Expected rootUri");
         }
@@ -15,6 +20,7 @@ class Indexer extends ServerBase {
         this.loaded = false;
         this.sources = {};
         this.ignoreDirs = [];
+        this.enableIndexCache = enableIndexCache;
         // fsPath -> { uri, message, range } for files that fail to parse.
         this.parsingErrors = new Map();
 
@@ -227,15 +233,45 @@ class Indexer extends ServerBase {
         }
 
         this.sources[uri.fsPath] = fileInfo;
+        this.cachedFiles?.add(uri.fsPath);
+        if (
+            this.projectUris &&
+            !this.projectUris.some(({ fsPath }) => fsPath === uri.fsPath)
+        ) {
+            this.projectUris.push(uri);
+        }
+        this.scheduleCacheSave();
 
         return true;
     }
 
     async loadSources(globs = ["**/**{.js,.ts,.html}"]) {
         const uris = await this.findUris(globs);
+        this.projectUris = uris;
 
         // Read-only symbols provided by installed packages.
         await this.packagesIndexer.load(this.rootUri);
+
+        // Warm start: restore the maps when nothing changed on disk. HTML
+        // sources hydrate eagerly (diagnostics/overview walk them); JS/TS
+        // hydrate lazily on first provider access.
+        if (this.enableIndexCache) {
+            const { loadIndexCache } = require("./index-cache");
+            this.restoredFromCache = await loadIndexCache(this, uris);
+
+            if (this.restoredFromCache) {
+                this.sources = {};
+                this.cachedFiles = new Set(uris.map(({ fsPath }) => fsPath));
+                this.loaded = true;
+
+                uris.filter((uri) => this.isFileSpacebarsHTML(uri)).forEach(
+                    (uri) => this.hydrateFile(uri)
+                );
+
+                console.info("* Index restored from cache.");
+                return { hasErrors: false, errors: [] };
+            }
+        }
 
         const parsingErrors = [];
         this.parsingErrors = new Map();
@@ -275,12 +311,59 @@ class Indexer extends ServerBase {
             }),
             {}
         );
+        this.cachedFiles = new Set(Object.keys(this.sources));
         this.loaded = true;
+
+        if (this.enableIndexCache) {
+            const { saveIndexCache } = require("./index-cache");
+            await saveIndexCache(this, uris);
+        }
 
         return {
             hasErrors: Array.isArray(parsingErrors) && !!parsingErrors.length,
             errors: parsingErrors,
         };
+    }
+
+    /**
+     * Parse a file on demand (used after a cache restore, where sources
+     * are lazy). Files unknown to the cache also get indexed.
+     */
+    hydrateFile(uriLike) {
+        const uri = this.parseUri(uriLike);
+
+        try {
+            const fileContent = require("fs").readFileSync(uri.fsPath, {
+                encoding: "utf-8",
+            });
+            const fileInfo = this.parseFile({ uri, fileContent });
+
+            if (!this.cachedFiles?.has(uri.fsPath)) {
+                this.indexFileInfo(fileInfo);
+                if (!this.isFileSpacebarsHTML(uri)) {
+                    this.indexJsFileUsages(fileInfo);
+                }
+                this.cachedFiles?.add(uri.fsPath);
+            }
+
+            this.sources[uri.fsPath] = fileInfo;
+            return fileInfo;
+        } catch (e) {
+            console.warn(`Hydration failed for ${uri.fsPath}. ${e}`);
+            return undefined;
+        }
+    }
+
+    // Debounced cache refresh after incremental changes.
+    scheduleCacheSave() {
+        if (!this.enableIndexCache || !this.projectUris) return;
+
+        clearTimeout(this.cacheSaveTimeout);
+        this.cacheSaveTimeout = setTimeout(() => {
+            const { saveIndexCache } = require("./index-cache");
+            saveIndexCache(this, this.projectUris);
+        }, 5000);
+        this.cacheSaveTimeout.unref?.();
     }
 
     getSources() {
@@ -292,7 +375,8 @@ class Indexer extends ServerBase {
     }
 
     getFileInfo(uri) {
-        return this.getSources()[this.parseUri(uri).fsPath];
+        const parsed = this.parseUri(uri);
+        return this.getSources()[parsed.fsPath] || this.hydrateFile(parsed);
     }
 
     getSourcesOfType(fileExtension) {

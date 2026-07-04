@@ -9,12 +9,13 @@ const FIXTURES_PATH = path.join(__dirname, "fixtures");
 const serverInstanceMock = { sendNotification: () => {} };
 const documentsInstanceMock = { get: () => undefined };
 
-const loadFixtureIndexer = async (fixtureName) => {
+const loadFixtureIndexer = async (fixtureName, indexerOptions = {}) => {
     const rootPath = path.join(FIXTURES_PATH, fixtureName);
     const indexer = new Indexer({
         rootUri: `file://${rootPath}`,
         serverInstance: serverInstanceMock,
         documentsInstance: documentsInstanceMock,
+        ...indexerOptions,
     });
 
     const result = await indexer.loadSources();

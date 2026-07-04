@@ -283,7 +283,7 @@ class RenameProvider extends ServerBase {
     // Wrapping template of an indexed HTML usage, resolved from the file
     // content kept on the sources map.
     getUsageWrappingTemplate({ node, uri }) {
-        const source = this.indexer.getSources()[uri.fsPath];
+        const source = this.indexer.getFileInfo(uri);
         if (!source?.fileContent) return;
 
         const { positionToOffset, getWrappingTemplateName } =
@@ -499,7 +499,11 @@ class RenameProvider extends ServerBase {
                 folderFsPath,
                 `${oldName}${extension}`
             );
-            const source = this.indexer.getSources()[scriptFsPath];
+            if (!require("fs").existsSync(scriptFsPath)) continue;
+
+            const source = this.indexer.getFileInfo(
+                require("vscode-uri").URI.file(scriptFsPath)
+            );
             if (!source?.fileContent) continue;
 
             const uriString = source.uri.toString();

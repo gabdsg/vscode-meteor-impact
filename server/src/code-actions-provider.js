@@ -399,8 +399,8 @@ class CodeActionsProvider extends ServerBase {
             ? `Template.${templateName}`
             : `Template["${templateName}"]`;
 
-        for (const [fsPath, group] of byFile) {
-            const jsContent = this.indexer.getSources()[fsPath]?.fileContent;
+        for (const [, group] of byFile) {
+            const jsContent = this.indexer.getFileInfo(group.uri)?.fileContent;
             if (!jsContent) continue;
 
             const uriString = group.uri.toString();
@@ -539,8 +539,7 @@ class CodeActionsProvider extends ServerBase {
             ];
         if (!helper?.uri) return;
 
-        const content =
-            this.indexer.getSources()[helper.uri.fsPath]?.fileContent;
+        const content = this.indexer.getFileInfo(helper.uri)?.fileContent;
         if (!content) return;
 
         // Only offer whole-line removal when the property owns its lines:
