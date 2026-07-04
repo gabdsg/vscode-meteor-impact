@@ -123,6 +123,39 @@ describe("Embedded HTML language service", () => {
         assert.strictEqual(result, null);
     });
 
+    it("folds {{#block}} regions keeping the closing tag visible", async () => {
+        const { indexer: blockVarsIndexer } = await loadFixtureIndexer(
+            "block-vars-project"
+        );
+        const provider = new HtmlFeaturesProvider(
+            serverInstanceMock,
+            documentsInstanceMock,
+            `file://${__dirname}`,
+            blockVarsIndexer
+        );
+
+        const ranges = provider.onFoldingRangesRequest({
+            textDocument: {
+                uri: fixtureUri("block-vars-project", "client/list.html"),
+            },
+        });
+
+        // {{#each}} opens on line 1 (0-based), closes on line 4.
+        assert.ok(
+            ranges.some(
+                ({ startLine, endLine }) => startLine === 1 && endLine === 3
+            ),
+            "Expected the each block fold"
+        );
+        // {{#let}} opens on line 5, closes on line 7.
+        assert.ok(
+            ranges.some(
+                ({ startLine, endLine }) => startLine === 5 && endLine === 6
+            ),
+            "Expected the let block fold"
+        );
+    });
+
     it("returns no folding ranges for JS files", () => {
         const provider = new HtmlFeaturesProvider(
             serverInstanceMock,

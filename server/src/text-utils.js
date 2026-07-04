@@ -115,10 +115,44 @@ const getBlockVariablesAtOffset = (content, offset) => {
     return variables;
 };
 
+/**
+ * Matched {{#block}}...{{/block}} pairs as offset ranges (open tag start
+ * to close tag end), nearest-match by name, unclosed blocks skipped.
+ */
+const getBlockRanges = (content) => {
+    const ranges = [];
+    const stack = [];
+
+    for (const match of content.matchAll(BLOCK_TAG_REGEX)) {
+        const openName = match[1];
+        if (openName) {
+            stack.push({ name: openName, start: match.index });
+            continue;
+        }
+
+        const closeName = match[2];
+        for (let i = stack.length - 1; i >= 0; i--) {
+            if (stack[i].name !== closeName) continue;
+
+            // Drops any nested unclosed opens along with the match.
+            const [open] = stack.splice(i);
+            ranges.push({
+                name: closeName,
+                startOffset: open.start,
+                endOffset: match.index + match[0].length,
+            });
+            break;
+        }
+    }
+
+    return ranges;
+};
+
 module.exports = {
     positionToOffset,
     offsetToLoc,
     getTemplateTags,
     getWrappingTemplateName,
     getBlockVariablesAtOffset,
+    getBlockRanges,
 };

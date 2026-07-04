@@ -13,10 +13,22 @@ class HtmlFeaturesProvider extends ServerBase {
         try {
             if (!this.isFileSpacebarsHTML(uri)) return;
 
-            return require("./html-language-service").getHtmlFoldingRanges(
-                this.parseUri(uri),
-                this.getFileContent(uri)
-            );
+            const content = this.getFileContent(uri);
+
+            const htmlRanges = require("./html-language-service")
+                .getHtmlFoldingRanges(this.parseUri(uri), content);
+
+            // {{#block}}...{{/block}} regions fold too; the closing tag
+            // stays visible, like HTML tags.
+            const { getBlockRanges, offsetToLoc } = require("./text-utils");
+            const blockRanges = getBlockRanges(content)
+                .map(({ startOffset, endOffset }) => ({
+                    startLine: offsetToLoc(content, startOffset).line - 1,
+                    endLine: offsetToLoc(content, endOffset).line - 2,
+                }))
+                .filter(({ startLine, endLine }) => endLine > startLine);
+
+            return [...(htmlRanges || []), ...blockRanges];
         } catch (e) {
             console.warn(`Folding ranges failed for ${uri}. ${e}`);
         }
