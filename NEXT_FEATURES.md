@@ -38,10 +38,10 @@ Rounds A and B are implemented too:
 - ~~Package awareness~~ (implemented via the local build bundles in
   `.meteor/local/build`: package templates/global helpers resolve in
   definitions, completion, hover and diagnostics, read-only)
-- **Data context inference** (full version): run the TypeScript checker
-  against code-behind files to know helper return types and offer property
-  completions inside `{{#each}}`/`{{#with}}` blocks. Consider building it
-  into `typescript-meteor-impact-plugin` instead of the language server.
+- ~~Data context inference~~ - DECLINED: only pays off when code-behinds
+  are TypeScript with annotated helper return types; this codebase's
+  templates are mostly JS, so the checker would infer `any` everywhere.
+  Revisit only if the app migrates its template code-behinds to typed TS.
 
 ### Housekeeping done
 
