@@ -101,6 +101,7 @@ class ServerInstance {
                     documentSymbolProvider: true,
                     workspaceSymbolProvider: true,
                     foldingRangeProvider: true,
+                    linkedEditingRangeProvider: true,
                     renameProvider: { prepareProvider: true },
                     documentFormattingProvider: true,
                     documentRangeFormattingProvider: true,
@@ -141,6 +142,9 @@ class ServerInstance {
         );
         this.connection.onFoldingRanges((...params) =>
             this.htmlFeaturesProvider.onFoldingRangesRequest(...params)
+        );
+        this.connection.languages.onLinkedEditingRange((...params) =>
+            this.htmlFeaturesProvider.onLinkedEditingRangeRequest(...params)
         );
         this.connection.onPrepareRename((...params) =>
             this.renameProvider.onPrepareRenameRequest(...params)

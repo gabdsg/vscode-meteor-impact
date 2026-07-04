@@ -22,6 +22,24 @@ class HtmlFeaturesProvider extends ServerBase {
         }
     }
 
+    onLinkedEditingRangeRequest({ textDocument: { uri }, position }) {
+        try {
+            if (!this.isFileSpacebarsHTML(uri)) return null;
+
+            const ranges = require("./html-language-service")
+                .getHtmlLinkedEditingRanges(
+                    this.parseUri(uri),
+                    this.getFileContent(uri),
+                    position
+                );
+
+            return ranges?.length ? { ranges } : null;
+        } catch (e) {
+            console.warn(`Linked editing ranges failed for ${uri}. ${e}`);
+            return null;
+        }
+    }
+
     onDocumentFormattingRequest({ textDocument: { uri }, options, range }) {
         try {
             if (!this.isFileSpacebarsHTML(uri)) return;

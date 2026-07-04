@@ -81,6 +81,48 @@ describe("Embedded HTML language service", () => {
         assert.ok(ranges.some(({ startLine }) => startLine === 0));
     });
 
+    it("returns linked editing ranges for paired tags", () => {
+        const provider = new HtmlFeaturesProvider(
+            serverInstanceMock,
+            documentsInstanceMock,
+            `file://${__dirname}`,
+            indexer
+        );
+
+        // Inside the "div" tag name on line 1 of foo.html; the closing
+        // </div> is on line 5.
+        const result = provider.onLinkedEditingRangeRequest({
+            position: { line: 1, character: 6 },
+            textDocument: {
+                uri: fixtureUri("basic-project", "client/foo.html"),
+            },
+        });
+
+        assert.ok(result?.ranges, "Expected linked editing ranges");
+        assert.strictEqual(result.ranges.length, 2);
+        assert.strictEqual(result.ranges[0].start.line, 1);
+        assert.strictEqual(result.ranges[1].start.line, 5);
+    });
+
+    it("returns null linked editing ranges outside tag names", () => {
+        const provider = new HtmlFeaturesProvider(
+            serverInstanceMock,
+            documentsInstanceMock,
+            `file://${__dirname}`,
+            indexer
+        );
+
+        // On the mustache content of line 2.
+        const result = provider.onLinkedEditingRangeRequest({
+            position: { line: 2, character: 17 },
+            textDocument: {
+                uri: fixtureUri("basic-project", "client/foo.html"),
+            },
+        });
+
+        assert.strictEqual(result, null);
+    });
+
     it("returns no folding ranges for JS files", () => {
         const provider = new HtmlFeaturesProvider(
             serverInstanceMock,

@@ -54,6 +54,17 @@ const getHtmlHover = (uri, content, position) => {
 const getHtmlFoldingRanges = (uri, content) =>
     getService().getFoldingRanges(createDocument(uri, content));
 
+const getHtmlLinkedEditingRanges = (uri, content, position) => {
+    const service = getService();
+    const document = createDocument(uri, content);
+
+    return service.findLinkedEditingRanges(
+        document,
+        position,
+        service.parseHTMLDocument(document)
+    );
+};
+
 const getHtmlFormattingEdits = (uri, content, options, range) =>
     getService().format(createDocument(uri, content), range, {
         tabSize: options?.tabSize ?? 4,
@@ -68,5 +79,6 @@ module.exports = {
     getHtmlCompletions,
     getHtmlHover,
     getHtmlFoldingRanges,
+    getHtmlLinkedEditingRanges,
     getHtmlFormattingEdits,
 };
