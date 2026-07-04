@@ -14,6 +14,7 @@ const METEOR_IDENTIFIERS = {
 
 const TEMPLATE_CALLERS = {
     HELPERS: "helpers",
+    EVENTS: "events",
     ON_CREATED: "onCreated",
     ON_RENDERED: "onRendered",
     REGISTER_HELPER: "registerHelper",

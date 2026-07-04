@@ -1,6 +1,6 @@
 /**
- * Indexer focused on Blaze elements: helpers and template definitions.
- * For the future, we should support events too.
+ * Indexer focused on Blaze elements: helpers, events and template
+ * definitions.
  */
 class BlazeIndexer {
     constructor() {
@@ -8,9 +8,11 @@ class BlazeIndexer {
         this.htmlUsageMap = {};
         // Global helpers registered with Template.registerHelper("name", fn).
         this.globalHelpersMap = {};
+        // Event key -> every location where a handler is defined for it.
+        this.eventsMap = {};
     }
 
-    addHelpersToMap({ templateName, helperName, value, uri }) {
+    addHelpersToMap({ templateName, helperName, value, uri, kind }) {
         this.templateIndexMap[templateName] =
             this.templateIndexMap[templateName] || {};
 
@@ -19,19 +21,19 @@ class BlazeIndexer {
         this.templateIndexMap[templateName].jsUri =
             this.templateIndexMap[templateName].jsUri || uri;
 
-        this.templateIndexMap[templateName]["helpers"] =
-            this.templateIndexMap[templateName]["helpers"] || {};
+        this.templateIndexMap[templateName][kind] =
+            this.templateIndexMap[templateName][kind] || {};
 
         // Keep the uri around so that providers can point to the correct
         // file (.js or .ts) where the helper is defined.
-        this.templateIndexMap[templateName]["helpers"][helperName] = {
+        this.templateIndexMap[templateName][kind][helperName] = {
             start: value.start,
             end: value.end,
             uri,
         };
     }
 
-    addUsage({ node, uri, key }) {
+    addUsage({ node, uri, key, map = this.htmlUsageMap }) {
         if (!node || !uri || !key) {
             throw new Error(
                 `Expected to receive node, uri and key, but got: ${node}, ${uri} and ${key}.`
@@ -46,14 +48,14 @@ class BlazeIndexer {
         } = node;
         const entryKey = `${uri.fsPath}${startLine}${startColumn}${endLine}${endColumn}`;
 
-        if (!Array.isArray(this.htmlUsageMap[key])) {
-            this.htmlUsageMap[key] = [{ node, uri, entryKey }];
+        if (!Array.isArray(map[key])) {
+            map[key] = [{ node, uri, entryKey }];
             return;
         }
 
         // Entry already exists, no need to add again.
         if (
-            this.htmlUsageMap[key].some(
+            map[key].some(
                 ({ entryKey: existingEntryKey }) =>
                     existingEntryKey === entryKey
             )
@@ -61,7 +63,7 @@ class BlazeIndexer {
             return;
         }
 
-        return this.htmlUsageMap[key].push({ node, uri, entryKey });
+        return map[key].push({ node, uri, entryKey });
     }
 
     indexGlobalHelpers({ node, uri }) {
@@ -106,7 +108,14 @@ class BlazeIndexer {
 
         this.indexGlobalHelpers({ node, uri });
 
-        if (callee.property.name !== TEMPLATE_CALLERS.HELPERS) return;
+        // Helpers and events maps have the same shape and are indexed alike.
+        const caller = callee.property.name;
+        if (
+            ![TEMPLATE_CALLERS.HELPERS, TEMPLATE_CALLERS.EVENTS].includes(
+                caller
+            )
+        )
+            return;
 
         const templateName = this.getTemplateNameFromProperty(
             callee.object.property
@@ -125,7 +134,7 @@ class BlazeIndexer {
 
                 const { key, loc } = prop;
                 // Keys can be identifiers ({ helper() {} }) or string
-                // literals ({ "my-helper": () => {} }).
+                // literals ({ "my-helper": () => {} }, { "click .btn": fn }).
                 const helperName = key.name || key.value;
                 if (!helperName) continue;
 
@@ -134,7 +143,19 @@ class BlazeIndexer {
                     helperName,
                     value: loc,
                     uri,
+                    kind: caller,
                 });
+
+                if (caller === TEMPLATE_CALLERS.EVENTS) {
+                    // Track every location defining a handler for this event
+                    // key, so that find-references works across event maps.
+                    this.addUsage({
+                        node: key,
+                        uri,
+                        key: helperName,
+                        map: this.eventsMap,
+                    });
+                }
             }
         }
     }
@@ -261,6 +282,10 @@ class BlazeIndexer {
         return this.globalHelpersMap[this.getHelperName(helper)];
     }
 
+    getEventLocations(eventKey) {
+        return this.eventsMap[eventKey];
+    }
+
     getHelperFromTemplate({ templateName, helper, templateUri }) {
         const _name = this.getHelperName(helper);
 
@@ -308,6 +333,7 @@ class BlazeIndexer {
         this.templateIndexMap = {};
         this.htmlUsageMap = {};
         this.globalHelpersMap = {};
+        this.eventsMap = {};
     }
 }
 

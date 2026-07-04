@@ -39,6 +39,7 @@ class ReferencesProvider extends ServerBase {
         const usageInfoArray =
             this.indexer.methodsAndPublicationsIndexer.getUsageInfo(nodeKey) ||
             this.indexer.blazeIndexer.htmlUsageMap[nodeKey] ||
+            this.indexer.blazeIndexer.getEventLocations(nodeKey) ||
             this.indexer.blazeIndexer.getTemplateInfo(nodeKey);
 
         if (!Array.isArray(usageInfoArray) || !usageInfoArray.length) {
