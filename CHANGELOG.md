@@ -6,6 +6,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [04/07/26]
 
+-   Add semantic highlighting for Spacebars: resolved helpers, templates, block keywords and block variables get distinct colors.
+-   Track `{{#each x in ...}}`/`{{#let}}` block variables: offered in completion, excluded from unresolved-helper diagnostics.
+-   Add signature help for `{{helper args}}` mustaches and `Meteor.call`/`callAsync`/`subscribe` argument lists, preserving TypeScript parameter annotations.
 -   Add linked editing of paired HTML tags in Spacebars files.
 -   Add quick fixes for diagnostics: create missing template/helper stubs, remove unused helpers.
 -   Connect event maps with template HTML: go-to-definition from event keys to targeted elements, find handlers from class/id tokens, and selector completion inside event keys.

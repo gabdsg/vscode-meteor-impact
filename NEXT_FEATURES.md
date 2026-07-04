@@ -13,27 +13,20 @@ The original WebStorm-parity roadmap is fully implemented:
 9. ~~Embedded HTML language service~~ (HTML completion/hover/folding + Emmet in spacebars files)
 10. ~~Spacebars formatting~~ (document + range, mustache-block indentation)
 
-Round A is implemented too:
+Rounds A and B are implemented too:
 
 - ~~Linked editing of paired HTML tags~~ (requires `editor.linkedEditing`)
 - ~~Quick fixes~~ (create missing template/helper stubs, remove unused helpers)
 - ~~Event selector intelligence~~ (event key -> element definition, class
   token -> handler references, selector completion in event keys)
+- ~~Block-variable awareness~~ (`{{#each x in ...}}`/`{{#let}}` bindings in
+  completion and diagnostics)
+- ~~Semantic tokens~~ (resolved helpers/templates/keywords/block variables
+  get semantic colors; unresolved paths keep the grammar color)
+- ~~Signature help~~ (`{{helper |}}` and `Meteor.call("x", |)`, with TS
+  parameter annotations preserved)
 
 ## Ideas for future rounds
-
-### Round B - "the editor understands Spacebars deeply"
-
-- **Semantic tokens** for mustaches, so scoped helpers, global helpers,
-  template partials, block keywords and unresolved names get distinct
-  colors. The resolution logic already exists in the hover provider; the
-  work is the LSP token encoding.
-- **Block-variable awareness**: track `{{#each x in ...}}`, `{{#let}}` and
-  `{{#with}}` scopes so completion offers the bound variables and semantic
-  tokens/diagnostics treat them as resolved.
-- **Signature help**: capture helper parameter lists at index time (slice
-  the function signature by loc) and serve `{{helper |}}` plus
-  `Meteor.call("x", |)` signature requests.
 
 ### Round C - bigger bets
 
