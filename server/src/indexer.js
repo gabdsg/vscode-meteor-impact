@@ -15,6 +15,8 @@ class Indexer extends ServerBase {
         this.loaded = false;
         this.sources = {};
         this.ignoreDirs = [];
+        // fsPath -> { uri, message, range } for files that fail to parse.
+        this.parsingErrors = new Map();
 
         this.blazeIndexer = new BlazeIndexer();
         this.methodsAndPublicationsIndexer =
@@ -121,6 +123,36 @@ class Indexer extends ServerBase {
         });
     }
 
+    /**
+     * Normalize a parser exception into a positioned entry so it can be
+     * shown as an in-file diagnostic instead of a notification.
+     */
+    recordParsingError(uri, error, fileContent) {
+        // babel: error.loc; handlebars: error.lineNumber/column; fallback:
+        // "line N" in the message.
+        const line =
+            error?.loc?.line ??
+            error?.lineNumber ??
+            Number(`${error?.message}`.match(/line (\d+)/i)?.[1]) ??
+            1;
+        const safeLine = Number.isFinite(line) && line > 0 ? line : 1;
+        const column = error?.loc?.column ?? 0;
+
+        const lineText = fileContent?.split("\n")[safeLine - 1] ?? "";
+        const message = `${error?.message || error}`.split("\n")[0];
+
+        this.parsingErrors.set(uri.fsPath, {
+            uri,
+            message,
+            range: {
+                startLine: safeLine,
+                startColumn: column,
+                endLine: safeLine,
+                endColumn: Math.max(lineText.length, column + 1),
+            },
+        });
+    }
+
     parseFile({ uri, fileContent }) {
         const { AstWalker, parseJsSource } = require("./ast-helpers");
         const { SpacebarsCompiler } = require("@blastjs/spacebars-compiler");
@@ -171,17 +203,19 @@ class Indexer extends ServerBase {
         // Parse before dropping anything, so a file that is broken beyond
         // error recovery keeps its previous (stale but usable) index.
         let fileInfo;
+        let fileContent;
         try {
-            fileInfo = this.parseFile({
-                uri,
-                fileContent: this.getFileContent(uri),
-            });
+            fileContent = this.getFileContent(uri);
+            fileInfo = this.parseFile({ uri, fileContent });
         } catch (e) {
             console.warn(
                 `Incremental reindex skipped for ${uri.fsPath}. ${e}`
             );
+            this.recordParsingError(uri, e, fileContent);
             return false;
         }
+
+        this.parsingErrors.delete(uri.fsPath);
 
         [this.blazeIndexer, this.methodsAndPublicationsIndexer].forEach((i) =>
             i?.removeUri?.(uri.fsPath)
@@ -204,16 +238,17 @@ class Indexer extends ServerBase {
         await this.packagesIndexer.load(this.rootUri);
 
         const parsingErrors = [];
+        this.parsingErrors = new Map();
         // Read and parse concurrently...
         const results = await Promise.all(
             uris.map(async (uri) => {
+                let fileContent;
                 try {
-                    return this.parseFile({
-                        uri,
-                        fileContent: await this.getFileContentPromise(uri),
-                    });
+                    fileContent = await this.getFileContentPromise(uri);
+                    return this.parseFile({ uri, fileContent });
                 } catch (e) {
                     console.error(`Error parsing ${uri}. ${e}`);
+                    this.recordParsingError(uri, e, fileContent);
                     parsingErrors.push({ uri, error: e });
                     return;
                 }
@@ -303,16 +338,9 @@ class Indexer extends ServerBase {
         [this.blazeIndexer, this.methodsAndPublicationsIndexer].forEach((i) =>
             i?.reset?.()
         );
-        const { hasErrors, errors } = await this.loadSources();
-        if (!hasErrors) {
-            console.info("* Indexing completed.");
-            return;
-        }
-
-        this.serverInstance.sendNotification(
-            "errors/parsing",
-            errors.map(({ uri }) => uri.fsPath).join(", \n")
-        );
+        // Parse errors surface as in-file diagnostics after the reindex.
+        await this.loadSources();
+        console.info("* Indexing completed.");
     }
 }
 

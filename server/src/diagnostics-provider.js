@@ -53,6 +53,7 @@ class DiagnosticsProvider extends ServerBase {
                 .filter(({ isClosing }) => !isClosing),
         }));
 
+        this.checkParseErrors(diagnosticsByUri);
         this.checkUnresolvedSymbols(diagnosticsByUri, htmlSources);
         this.checkDuplicateTemplates(diagnosticsByUri, templateTagsByFile);
         this.checkUnusedHelpers(diagnosticsByUri);
@@ -60,6 +61,27 @@ class DiagnosticsProvider extends ServerBase {
         this.checkUnusedMethodsAndPublications(diagnosticsByUri);
 
         return diagnosticsByUri;
+    }
+
+    // Files the indexer couldn't parse: a real error squiggle at the spot,
+    // instead of the old "errors/parsing" popup.
+    checkParseErrors(diagnosticsByUri) {
+        const { DiagnosticSeverity, Range } = require("vscode-languageserver");
+
+        for (const entry of this.indexer.parsingErrors?.values() || []) {
+            const { startLine, startColumn, endLine, endColumn } = entry.range;
+
+            this.addDiagnostic(diagnosticsByUri, entry.uri, {
+                severity: DiagnosticSeverity.Error,
+                range: Range.create(
+                    startLine - 1,
+                    startColumn,
+                    endLine - 1,
+                    endColumn
+                ),
+                message: `Parse error: ${entry.message}`,
+            });
+        }
     }
 
     /**

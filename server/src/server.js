@@ -248,9 +248,10 @@ class ServerInstance {
                 this.fileReindexingTimeouts.delete(uri);
 
                 try {
-                    if (this.indexer.reindexFile(uri)) {
-                        this.diagnosticsProvider?.publish();
-                    }
+                    this.indexer.reindexFile(uri);
+                    // Publish either way: a failed parse just produced a
+                    // parse-error diagnostic.
+                    this.diagnosticsProvider?.publish();
                 } catch (err) {
                     console.error(
                         `Failed to reindex ${uri}: ${err.message}. Falling back to full reindex.`
