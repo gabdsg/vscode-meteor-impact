@@ -102,6 +102,8 @@ class ServerInstance {
                     workspaceSymbolProvider: true,
                     foldingRangeProvider: true,
                     renameProvider: { prepareProvider: true },
+                    documentFormattingProvider: true,
+                    documentRangeFormattingProvider: true,
                     completionProvider: {
                         resolveProvider: "true",
                         triggerCharacters: ["."],
@@ -142,6 +144,12 @@ class ServerInstance {
         );
         this.connection.onPrepareRename((...params) =>
             this.renameProvider.onPrepareRenameRequest(...params)
+        );
+        this.connection.onDocumentFormatting((...params) =>
+            this.htmlFeaturesProvider.onDocumentFormattingRequest(...params)
+        );
+        this.connection.onDocumentRangeFormatting((...params) =>
+            this.htmlFeaturesProvider.onDocumentFormattingRequest(...params)
         );
         this.connection.onRenameRequest((...params) =>
             this.renameProvider.onRenameRequest(...params)
