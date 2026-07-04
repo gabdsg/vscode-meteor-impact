@@ -121,6 +121,11 @@
                 "category": "Commands",
                 "command": "meteorImpact.enableTemplateFileNesting",
                 "title": "Nest Template Files Under Code-Behind"
+            },
+            {
+                "category": "Commands",
+                "command": "meteorImpact.generateSettingsTypes",
+                "title": "Generate Meteor.settings Types"
             }
         ],
         "keybindings": [

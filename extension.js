@@ -25,6 +25,9 @@ const {
 const {
     registerMeteorPackagesFileProviders,
 } = require("./src/meteor-packages-file");
+const {
+    generateMeteorSettingsTypes,
+} = require("./src/generate-settings-types");
 
 const createOrUpdateJsConfigFile = () => {
     generateBaseJsConfig();
@@ -74,6 +77,10 @@ async function activate(context) {
     const fileNestingDisposable = vscode.commands.registerCommand(
         "meteorImpact.enableTemplateFileNesting",
         enableTemplateFileNesting
+    );
+    const settingsTypesDisposable = vscode.commands.registerCommand(
+        "meteorImpact.generateSettingsTypes",
+        generateMeteorSettingsTypes
     );
 
     const toggleAutoRunPackagesWatcherDisposable =
@@ -171,6 +178,7 @@ async function activate(context) {
         createTemplateDisposable,
         goToCounterpartDisposable,
         fileNestingDisposable,
+        settingsTypesDisposable,
         ...registerMeteorPackagesFileProviders()
     );
 }
