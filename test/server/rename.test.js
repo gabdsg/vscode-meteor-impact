@@ -197,6 +197,55 @@ describe("RenameProvider", () => {
         );
     });
 
+    it("renames a template from its own tag attribute", async () => {
+        const { indexer, rootPath } = await loadFixtureIndexer(
+            "basic-project"
+        );
+
+        // Cursor on "bar" inside <template name="bar"> in bar.html.
+        const result = createProvider(indexer).onRenameRequest({
+            position: { line: 0, character: 17 },
+            textDocument: {
+                uri: fixtureUri("basic-project", "client/bar.html"),
+            },
+            newName: "sidebar",
+        });
+
+        assert.ok(result?.changes, "Expected a workspace edit");
+        assert.strictEqual(Object.keys(result.changes).length, 3);
+        assert.ok(
+            applyTo(rootPath, result.changes, "client/bar.html").includes(
+                '<template name="sidebar">'
+            )
+        );
+        assert.ok(
+            applyTo(rootPath, result.changes, "client/foo.html").includes(
+                "{{> sidebar}}"
+            )
+        );
+        assert.ok(
+            applyTo(rootPath, result.changes, "client/bar.js").includes(
+                "Template.sidebar.helpers({"
+            )
+        );
+    });
+
+    it("prepares rename from the template tag with the attribute range", async () => {
+        const { indexer } = await loadFixtureIndexer("basic-project");
+
+        const prepared = createProvider(indexer).onPrepareRenameRequest({
+            position: { line: 0, character: 17 },
+            textDocument: {
+                uri: fixtureUri("basic-project", "client/bar.html"),
+            },
+        });
+
+        assert.ok(prepared, "Expected a prepare rename result");
+        assert.strictEqual(prepared.placeholder, "bar");
+        assert.strictEqual(prepared.range.start.character, 16);
+        assert.strictEqual(prepared.range.end.character, 19);
+    });
+
     it("prepares rename with the symbol range and placeholder", async () => {
         const { indexer } = await loadFixtureIndexer("basic-project");
 

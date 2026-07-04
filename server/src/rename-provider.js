@@ -74,10 +74,49 @@ class RenameProvider extends ServerBase {
         }
     }
 
+    // With the cursor on the name attribute of a <template> tag: the
+    // definition side of a template rename.
+    resolveTemplateTagTarget({ content, position }) {
+        const { Range } = require("vscode-languageserver");
+        const {
+            positionToOffset,
+            offsetToLoc,
+            getTemplateTags,
+        } = require("./text-utils");
+
+        const offset = positionToOffset(content, position);
+
+        for (const tag of getTemplateTags(content)) {
+            if (tag.isClosing) continue;
+
+            const nameEnd = tag.nameStart + tag.name.length;
+            if (offset < tag.nameStart || offset > nameEnd) continue;
+
+            const start = offsetToLoc(content, tag.nameStart);
+            const end = offsetToLoc(content, nameEnd);
+            return {
+                kind: "template",
+                name: tag.name,
+                originRange: Range.create(
+                    start.line - 1,
+                    start.column,
+                    end.line - 1,
+                    end.column
+                ),
+            };
+        }
+
+        return;
+    }
+
     resolveHtmlTarget({ uri, position }) {
         const { AstWalker, NODE_TYPES } = require("./ast-helpers");
 
         const content = this.getFileContent(uri);
+
+        const tagTarget = this.resolveTemplateTagTarget({ content, position });
+        if (tagTarget) return tagTarget;
+
         const htmlWalker = new AstWalker(
             content,
             require("@handlebars/parser").parse
