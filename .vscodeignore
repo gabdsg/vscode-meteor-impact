@@ -12,3 +12,5 @@ images/demo/**
 **/*.map
 **/.eslintrc.json
 .claude/**
+coverage/**
+.c8rc.json

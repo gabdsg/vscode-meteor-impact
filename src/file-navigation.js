@@ -1,7 +1,5 @@
 const { Uri, window, workspace, ConfigurationTarget } = require("vscode");
-
-// Cycle order: template -> code-behind -> style -> template...
-const COUNTERPART_CYCLE = [[".html"], [".ts", ".js"], [".less", ".css"]];
+const { counterpartCandidates } = require("./counterpart-files");
 
 const exists = async (uri) => {
     try {
@@ -19,25 +17,12 @@ const goToCounterpart = async () => {
     const editor = window.activeTextEditor;
     if (!editor) return;
 
-    const match = editor.document.uri.fsPath.match(
-        /^(.*)(\.html|\.ts|\.js|\.less|\.css)$/
-    );
-    if (!match) return;
-
-    const [, base, extension] = match;
-    const groupIndex = COUNTERPART_CYCLE.findIndex((extensions) =>
-        extensions.includes(extension)
-    );
-
-    for (let step = 1; step < COUNTERPART_CYCLE.length; step++) {
-        const group =
-            COUNTERPART_CYCLE[(groupIndex + step) % COUNTERPART_CYCLE.length];
-
-        for (const candidateExtension of group) {
-            const candidate = Uri.file(`${base}${candidateExtension}`);
-            if (await exists(candidate)) {
-                return window.showTextDocument(candidate);
-            }
+    for (const candidatePath of counterpartCandidates(
+        editor.document.uri.fsPath
+    )) {
+        const candidate = Uri.file(candidatePath);
+        if (await exists(candidate)) {
+            return window.showTextDocument(candidate);
         }
     }
 
