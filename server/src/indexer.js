@@ -267,7 +267,7 @@ class Indexer extends ServerBase {
         settings: {
             conf: {
                 settingsEditor: {
-                    meteorToolbox: { ignoreDirsOnIndexing } = {},
+                    meteorImpact: { ignoreDirsOnIndexing } = {},
                 } = {},
             } = {},
         } = {},

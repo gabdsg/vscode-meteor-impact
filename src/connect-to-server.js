@@ -11,7 +11,7 @@ const registerExtractTemplateCommand = () => {
 
     extractTemplateCommandDisposable?.dispose?.();
     extractTemplateCommandDisposable = commands.registerCommand(
-        "meteorToolbox.extractTemplate",
+        "meteorImpact.extractTemplate",
         async (args) => {
             const templateName = await window.showInputBox({
                 prompt: "Name for the extracted template",
@@ -24,7 +24,7 @@ const registerExtractTemplateCommand = () => {
 
             if (!templateName) return;
 
-            await client.sendRequest("meteorToolbox/extractTemplate", {
+            await client.sendRequest("meteorImpact/extractTemplate", {
                 ...args,
                 templateName,
             });
@@ -63,14 +63,14 @@ const connectToLanguageServer = async (asAbsolutePath) => {
             { scheme: "file", language: "spacebars" },
         ],
         synchronize: {
-            configurationSection: "conf.settingsEditor.meteorToolbox",
+            configurationSection: "conf.settingsEditor.meteorImpact",
         },
     };
 
     // Create the language client and start the client.
     client = new LanguageClient(
-        "meteor-language-server",
-        "Meteor Language Server",
+        "meteor-impact-language-server",
+        "Meteor Impact Language Server",
         serverOptions,
         clientOptions
     );
@@ -97,7 +97,7 @@ const setupNotifications = () => {
 
         const { window } = require("vscode");
         window.showErrorMessage(
-            `Meteor Toolbox was unable to parse the following files: ${filesPath}.
+            `Meteor Impact was unable to parse the following files: ${filesPath}.
              If parsing errors are expected for such files, remember to add them to the excluded files list on the extension settings.`
         );
     });

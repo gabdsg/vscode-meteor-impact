@@ -100,7 +100,7 @@ describe("Template scaffolding", () => {
         const os = require("os");
 
         const root = fs.mkdtempSync(
-            path.join(os.tmpdir(), "meteor-toolbox-scaffold-")
+            path.join(os.tmpdir(), "meteor-impact-scaffold-")
         );
         const folder = path.join(root, "client", "myWidget");
         fs.mkdirSync(folder, { recursive: true });

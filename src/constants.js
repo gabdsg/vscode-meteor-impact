@@ -26,12 +26,12 @@ const BASE_LAUNCH_CONFIG = {
     baseConfig: () => {
         const portToUse = workspace
             .getConfiguration()
-            .get("conf.settingsEditor.meteorToolbox.port");
+            .get("conf.settingsEditor.meteorImpact.port");
 
         const additionalArgs =
             workspace
                 .getConfiguration()
-                .get("conf.settingsEditor.meteorToolbox.additionalArgs")
+                .get("conf.settingsEditor.meteorImpact.additionalArgs")
                 ?.split(" ") || [];
 
         return {

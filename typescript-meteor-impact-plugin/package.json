@@ -1,5 +1,5 @@
 {
-    "name": "typescript-meteor-toolbox-plugin",
+    "name": "typescript-meteor-impact-plugin",
     "version": "0.0.1",
     "license": "MIT",
     "main": "./src/index",

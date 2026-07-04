@@ -34,7 +34,7 @@ class DiagnosticsProvider extends ServerBase {
         if (!diagnosticsByUri.has(key)) diagnosticsByUri.set(key, []);
 
         diagnosticsByUri.get(key).push({
-            source: "meteor-toolbox",
+            source: "meteor-impact",
             ...diagnostic,
         });
     }

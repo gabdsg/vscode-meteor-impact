@@ -1,8 +1,8 @@
-const formatLog = (msg) => `[typescript-meteor-toolbox-plugin]: ${msg}`;
+const formatLog = (msg) => `[typescript-meteor-impact-plugin]: ${msg}`;
 
 const create = (info) => {
     info.project.projectService.logger.info(
-        formatLog("Successfully started typescript-meteor-toolbox-plugin")
+        formatLog("Successfully started typescript-meteor-impact-plugin")
     );
 
     // Set up decorator object

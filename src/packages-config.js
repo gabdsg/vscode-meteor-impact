@@ -109,7 +109,7 @@ async function addImportedPackagesToJsConfig() {
 async function addCustomPackageOptionsToJsConfig() {
     const meteorPackageDirsFromExtensionConfig = workspace
         .getConfiguration()
-        .get("conf.settingsEditor.meteorToolbox.meteorPackageDirs")
+        .get("conf.settingsEditor.meteorImpact.meteorPackageDirs")
         ?.split(";")
         ?.map((dir) => `${dir}/**/package.js`);
 

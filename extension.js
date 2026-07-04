@@ -39,17 +39,17 @@ const disposeWatchers = () =>
 async function activate(context) {
     if (!(await isMeteorProject())) {
         console.warn(
-            "Not in a meteor project, not starting Meteor Toolbox extension..."
+            "Not in a meteor project, not starting Meteor Impact extension..."
         );
         return;
     }
 
-    console.log("Starting Meteor Toolbox extension...");
+    console.log("Starting Meteor Impact extension...");
 
     // Gates the explorer context menu contributions.
     vscode.commands.executeCommand(
         "setContext",
-        "meteorToolbox.isMeteorProject",
+        "meteorImpact.isMeteorProject",
         true
     );
 
@@ -57,32 +57,32 @@ async function activate(context) {
     createOrUpdateJsConfigFile();
 
     const createTemplateDisposable = vscode.commands.registerCommand(
-        "meteorToolbox.createTemplate",
+        "meteorImpact.createTemplate",
         createTemplate
     );
 
     const toggleAutoRunPackagesWatcherDisposable =
         vscode.commands.registerCommand(
-            "config.commands.meteorToolbox.toggleAutoRunPackagesWatcher",
+            "meteorImpact.toggleAutoRunPackagesWatcher",
             toggleAutoRunPackagesWatcher
         );
 
     const autoEnabled = vscode.workspace
         .getConfiguration()
-        .get("conf.settingsEditor.meteorToolbox.auto");
+        .get("conf.settingsEditor.meteorImpact.auto");
 
     const clearMeteorBuildCacheDisposable = vscode.commands.registerCommand(
-        "config.commands.meteorToolbox.clearMeteorBuildCache",
+        "meteorImpact.clearMeteorBuildCache",
         clearMeteorBuildCache
     );
 
     const regenerateLaunchJsonDisposable = vscode.commands.registerCommand(
-        "config.commands.meteorToolbox.regenerateLaunchJson",
+        "meteorImpact.regenerateLaunchJson",
         addDebugAndRunOptions
     );
 
     const runOnceDisposable = vscode.commands.registerCommand(
-        "config.commands.meteorToolbox.runOnce",
+        "meteorImpact.runOnce",
         () => {
             if (autoEnabled) {
                 vscode.window.showInformationMessage(
@@ -126,7 +126,7 @@ async function activate(context) {
     }
 
     const restartDisposer = vscode.commands.registerCommand(
-        "_meteorToolbox.reloadExtension",
+        "_meteorImpact.reloadExtension",
         () => {
             deactivate();
             for (const sub of context.subscriptions) {

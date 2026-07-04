@@ -1,10 +1,10 @@
 {
-    "name": "meteor-toolbox",
-    "displayName": "Meteor Toolbox",
-    "description": "Easily set up your Meteor environment (intelisense, run options and many other things).",
+    "name": "meteor-impact",
+    "displayName": "Meteor Impact",
+    "description": "Full-impact language tooling for Meteor and Blaze: TypeScript-aware indexing, completions, go-to-definition, rename, diagnostics, refactorings and template scaffolding.",
     "version": "1.3.3",
     "private": "true",
-    "publisher": "meteor-toolbox",
+    "publisher": "gabdsg",
     "license": "MIT",
     "contributors": [
         {
@@ -20,16 +20,18 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/matheusccastroo/vscode-meteor-toolbox.git"
+        "url": "git+https://github.com/gabdsg/vscode-meteor-toolbox.git"
     },
     "bugs": {
-        "url": "https://github.com/matheusccastroo/vscode-meteor-toolbox/issues"
+        "url": "https://github.com/gabdsg/vscode-meteor-toolbox/issues"
     },
     "categories": [
         "Other"
     ],
     "keywords": [
         "meteor",
+        "blaze",
+        "spacebars",
         "intelisense",
         "atmosphere",
         "packages"
@@ -42,14 +44,14 @@
     "contributes": {
         "configuration": [
             {
-                "id": "meteorToolbox",
-                "title": "Settings for Meteor Toolbox extension",
+                "id": "meteorImpact",
+                "title": "Settings for Meteor Impact extension",
                 "order": 2,
                 "properties": {
-                    "conf.settingsEditor.meteorToolbox": {
+                    "conf.settingsEditor.meteorImpact": {
                         "type": "object",
                         "order": 2,
-                        "description": "Meteor Toolbox options.",
+                        "description": "Meteor Impact options.",
                         "properties": {
                             "auto": {
                                 "type": "boolean",
@@ -87,42 +89,42 @@
         "commands": [
             {
                 "category": "Configuration",
-                "command": "config.commands.meteorToolbox.toggleAutoRunPackagesWatcher",
-                "title": "Toggle Meteor Toolbox Auto Run"
+                "command": "meteorImpact.toggleAutoRunPackagesWatcher",
+                "title": "Toggle Meteor Impact Auto Run"
             },
             {
                 "category": "Commands",
-                "command": "config.commands.meteorToolbox.runOnce",
-                "title": "Run Meteor Toolbox set up manually"
+                "command": "meteorImpact.runOnce",
+                "title": "Run Meteor Impact set up manually"
             },
             {
                 "category": "Commands",
-                "command": "config.commands.meteorToolbox.clearMeteorBuildCache",
+                "command": "meteorImpact.clearMeteorBuildCache",
                 "title": "Run clear meteor build cache"
             },
             {
                 "category": "Commands",
-                "command": "config.commands.meteorToolbox.regenerateLaunchJson",
-                "title": "Re-create Meteor Toolbox run/debug options"
+                "command": "meteorImpact.regenerateLaunchJson",
+                "title": "Re-create Meteor Impact run/debug options"
             },
             {
                 "category": "Commands",
-                "command": "meteorToolbox.createTemplate",
+                "command": "meteorImpact.createTemplate",
                 "title": "Create Blaze Template"
             }
         ],
         "menus": {
             "explorer/context": [
                 {
-                    "command": "meteorToolbox.createTemplate",
-                    "when": "meteorToolbox.isMeteorProject && explorerResourceIsFolder",
+                    "command": "meteorImpact.createTemplate",
+                    "when": "meteorImpact.isMeteorProject && explorerResourceIsFolder",
                     "group": "2_workspace"
                 }
             ],
             "commandPalette": [
                 {
-                    "command": "meteorToolbox.createTemplate",
-                    "when": "meteorToolbox.isMeteorProject"
+                    "command": "meteorImpact.createTemplate",
+                    "when": "meteorImpact.isMeteorProject"
                 }
             ]
         },
@@ -157,7 +159,7 @@
         },
         "typescriptServerPlugins": [
             {
-                "name": "typescript-meteor-toolbox-plugin",
+                "name": "typescript-meteor-impact-plugin",
                 "enableForWorkspaceTypeScriptVersions": true
             }
         ]
@@ -186,6 +188,6 @@
         "json5": "^2.2.1",
         "lodash": "^4.17.21",
         "vscode-languageclient": "8.0.2",
-        "typescript-meteor-toolbox-plugin": "./typescript-meteor-toolbox-plugin"
+        "typescript-meteor-impact-plugin": "./typescript-meteor-impact-plugin"
     }
 }

@@ -183,7 +183,7 @@ class ServerInstance {
         );
         // Custom request from the client's extract-template command, sent
         // after the user picked a name.
-        this.connection.onRequest("meteorToolbox/extractTemplate", (params) =>
+        this.connection.onRequest("meteorImpact/extractTemplate", (params) =>
             this.codeActionsProvider.executeExtractTemplate(params)
         );
         this.connection.languages.semanticTokens.on((...params) =>

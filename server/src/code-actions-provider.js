@@ -24,7 +24,7 @@ class CodeActionsProvider extends ServerBase {
                 ? (context?.diagnostics || [])
                       .filter(
                           ({ source, data }) =>
-                              source === "meteor-toolbox" && !!data?.kind
+                              source === "meteor-impact" && !!data?.kind
                       )
                       .map((diagnostic) =>
                           this.createAction({ uri, diagnostic })
@@ -127,7 +127,7 @@ class CodeActionsProvider extends ServerBase {
      * {{> partial}} and move it into a new <template>, together with the
      * helpers/events it uses. The action carries a command: the client
      * asks for the template name and then requests the actual edit via
-     * meteorToolbox/extractTemplate (see executeExtractTemplate).
+     * meteorImpact/extractTemplate (see executeExtractTemplate).
      */
     createExtractTemplateAction({ uri, range }) {
         const context = this.getExtractTemplateContext({ uri, range });
@@ -140,7 +140,7 @@ class CodeActionsProvider extends ServerBase {
             kind: "refactor.extract",
             command: {
                 title,
-                command: "meteorToolbox.extractTemplate",
+                command: "meteorImpact.extractTemplate",
                 arguments: [
                     {
                         uri: context.parsedUri.toString(),

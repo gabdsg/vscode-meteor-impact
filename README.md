@@ -1,46 +1,69 @@
-# Meteor Toolbox
+# Meteor Impact
 
-Extension to enable intelisense for Meteor core, added packages and custom packages. Also adds launch configurations for the browser (run/debug).
+Full-impact language tooling for Meteor and Blaze. Meteor Impact turns VS Code
+into a first-class Meteor IDE: TypeScript-aware indexing, rich Spacebars
+intelligence, refactorings, diagnostics with quick fixes and template
+scaffolding - plus intellisense for Meteor core and Atmosphere packages and
+ready-made run/debug configurations.
 
-The packages watcher is inspired on [meteor-package-intellisense](https://github.com/mattblackdev/meteor-package-intellisense).
-
-The extension is available on [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=meteor-toolbox.meteor-toolbox) and on [Open VSX Registry](https://open-vsx.org/extension/meteor-toolbox/meteor-toolbox).
+Meteor Impact started as a fork of
+[Meteor Toolbox](https://github.com/matheusccastroo/vscode-meteor-toolbox) by
+Matheus and Renan Castro, and greatly extends its language server.
 
 ## Usage
 
-Just install the extension and it will add the needed configuration for you.
+Just install the extension in a Meteor project and it will add the needed
+configuration for you.
 
-Note: this extensions changes the `jsconfig.json` and `.vscode/launch.json`. Remember to not include those changes to your version control system, as they are scoped to your environment.
+Note: this extension changes the `jsconfig.json` and `.vscode/launch.json`.
+Remember to not include those changes to your version control system, as they
+are scoped to your environment.
 
-## Blaze Support
+## Language features
 
-Meteor Toolbox is the only extension implementing a Blaze completion/definition provider. Check it in action:
+Works in `.js`, `.ts` and Spacebars `.html` files:
 
-### Completions
+-   **Completions**: template-scoped and global helpers inside mustaches,
+    template names after `{{>`, block variables (`{{#each x in ...}}`,
+    `{{#let}}`), `Meteor.call`/`callAsync`/`subscribe` names, event selector
+    classes/ids, plus full HTML completion and Emmet in templates.
+-   **Go to definition / references**: helpers, templates, methods,
+    publications, event handlers (including event key -> targeted HTML
+    element and class token -> event handlers), from both HTML and JS/TS.
+-   **Rename (F2)**: helpers (scope-aware), templates (tags, partials and
+    `Template.X` references), methods/publications and event keys.
+-   **Diagnostics with quick fixes**: unresolved partials and helper calls
+    (create the missing stub in one click), duplicate template names, unused
+    helpers (with safe removal).
+-   **Refactorings**: "Extract selection to template" moves the selected
+    HTML into a new template together with the helpers/events it uses and
+    passes outer block variables as partial arguments.
+-   **Semantic highlighting**: resolved helpers, templates, block keywords
+    and block variables get distinct colors.
+-   **Hover, signature help, outline/breadcrumbs, workspace symbol search,
+    folding, linked tag editing and Spacebars formatting** (with mustache
+    block indentation).
+-   **Template scaffolding**: right-click a folder -> `Create Blaze
+    Template` generates the folder with the `.html`, `.js`/`.ts` (imports and
+    `onCreated`/`helpers`/`events` stubs) and optional `.less`/`.css` files.
 
-![completion-template](/images/demo/demo-template-completion-items.gif)
-
-![completion-meteor](/images/demo/demo-meteor-completion-items.gif)
-
-### Go to Definition and References
-
-![goto-definition](/images/demo/demo-methods-definitions-and-references.gif)
-
-![goto-definition-templates](/images/demo/demo-blaze-template-definition.gif)
-
-![goto-references](/images/demo/demo-template-helpers-definitions-and-references.gif)
-
-And much more...
+The index follows unsaved edits incrementally, so results stay fresh while
+you type.
 
 ## Available commands
 
-`Toggle Meteor Toolbox Auto Run` -> Toggle file watcher for packages folders.
+`Create Blaze Template` -> Scaffold a new template folder (also in the
+explorer context menu).
 
-`Run Meteor Toolbox set up manually` -> Run the extension manually, only one time (if autorun is not enabled).
+`Toggle Meteor Impact Auto Run` -> Toggle file watcher for packages folders.
+
+`Run Meteor Impact set up manually` -> Run the extension manually, only one
+time (if autorun is not enabled).
 
 `Run clear meteor build cache` -> Clear meteor build cache.
 
-`Re-create Meteor Toolbox run options` -> Re-create `launch.json` file. Usefull when you change the port settings.
+`Re-create Meteor Impact run/debug options` -> Re-create `launch.json` file.
+Usefull when you change the port settings.
 
 ## Requirements
 
@@ -48,7 +71,7 @@ This extension only runs inside a Meteor project.
 
 ## Extension Settings
 
--   `auto` -> Enable the file watcher for local packages. You can also set this option by running the command `Toggle Meteor Toolbox Auto Run` (it is enabled by default).
+-   `auto` -> Enable the file watcher for local packages. You can also set this option by running the command `Toggle Meteor Impact Auto Run` (it is enabled by default).
 
 -   `port` -> Set the port to use for meteor run/debug. Default to 3000.
 
@@ -58,28 +81,10 @@ This extension only runs inside a Meteor project.
 
 -   `ignoreDirsOnIndexing` -> List of directories to ignore when the Meteor Language Server is indexing the project.
 
-## Authors
+## Credits
 
-<div>
-  <table>
-  <tr>
-    <td valign="top">
-      <a href="https://github.com/matheusccastroo/">
- <img style="border-radius: 50%;" src="https://avatars.githubusercontent.com/u/48069682?v=4" width="100px;" alt=""/>
- <br />
- <sub><b>Matheus Castro</b></sub></a> 
-     <br />
-    <a href="https://github.com/matheusccastroo" title="Github"><img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white"/></a>
-    </td>
-    <td valign="top">
-      <a href="https://github.com/renanccastro/">
- <img style="border-radius: 50%;" src="https://avatars.githubusercontent.com/u/3637255?v=4" width="100px;" alt=""/>
- <br />
- <sub><b>Renan Castro</b></sub></a>
-    <br />
-    <a href="https://github.com/renanccastro" title="Github"><img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white"/></a>
-    </td>
-  </tr>
-</table>
-
-</div>
+Based on [Meteor Toolbox](https://github.com/matheusccastroo/vscode-meteor-toolbox)
+by [Matheus Castro](https://github.com/matheusccastroo) and
+[Renan Castro](https://github.com/renanccastro). The packages watcher is
+inspired on
+[meteor-package-intellisense](https://github.com/mattblackdev/meteor-package-intellisense).

@@ -71,7 +71,7 @@ describe("CodeActionsProvider - extract template refactor", () => {
             assert.ok(action, "Expected an extract action");
             assert.strictEqual(
                 action.command.command,
-                "meteorToolbox.extractTemplate"
+                "meteorImpact.extractTemplate"
             );
 
             const [args] = action.command.arguments;

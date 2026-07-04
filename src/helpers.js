@@ -55,18 +55,18 @@ const appendToExistingFile = async (dataObject, targetUri, arrayMergeMode) => {
 
 // Workaround to reload only the extension.
 const reloadExtension = () =>
-    commands.executeCommand("_meteorToolbox.reloadExtension");
+    commands.executeCommand("_meteorImpact.reloadExtension");
 
 const toggleAutoRunPackagesWatcher = async () => {
     const configuration = workspace.getConfiguration();
 
     const { auto, ...currentValue } = configuration.get(
-        "conf.settingsEditor.meteorToolbox"
+        "conf.settingsEditor.meteorImpact"
     );
 
     const newValue = { ...currentValue, ...{ auto: !!!auto } };
 
-    await configuration.update("conf.settingsEditor.meteorToolbox", newValue);
+    await configuration.update("conf.settingsEditor.meteorImpact", newValue);
     await reloadExtension();
 };
 

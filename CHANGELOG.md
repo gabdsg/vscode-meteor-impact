@@ -1,11 +1,12 @@
 # Change Log
 
-All notable changes to the "meteor-dev" extension will be documented in this file.
+All notable changes to the "Meteor Impact" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
 ## [04/07/26]
 
+-   Rename the extension to **Meteor Impact** (`gabdsg.meteor-impact`), forked from Meteor Toolbox. BREAKING: all identifiers changed - commands are now `meteorImpact.*` and the settings key is `conf.settingsEditor.meteorImpact` (update your settings.json/keybindings), the diagnostics source is `meteor-impact` and the TS server plugin is `typescript-meteor-impact-plugin`.
 -   Add a "Create Blaze Template" explorer context menu: scaffolds a folder with the template HTML, a .js or .ts code-behind (asked via prompt, importing the HTML/style and stubbing onCreated/helpers/events) and optionally a .less/.css file (less when the meteor less package is installed).
 -   Add "Extract selection to template" refactoring: prompts for the template name, moves the selected HTML into a new template, replaces it with a partial (passing outer block variables as arguments), and moves or copies the helpers and events the selection uses.
 -   Add semantic highlighting for Spacebars: resolved helpers, templates, block keywords and block variables get distinct colors.
