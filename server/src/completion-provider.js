@@ -69,22 +69,75 @@ class CompletionProvider extends ServerBase {
         );
     }
 
-    handleHtmlCompletion({ uri, position }) {
+    createTemplateNameCompletions() {
         const {
             CompletionItem,
             CompletionItemKind,
         } = require("vscode-languageserver");
         const { NODE_NAMES } = require("./ast-helpers");
 
-        // TODO -> Offer completion of helpers.
         return Object.keys(this.indexer.blazeIndexer.templateIndexMap).map(
             (templateName) => ({
                 ...CompletionItem.create(templateName),
-                textEdit: templateName,
                 kind: CompletionItemKind.Class,
-                documentation: NODE_NAMES.TEMPLATE,
+                detail: NODE_NAMES.TEMPLATE,
             })
         );
+    }
+
+    handleHtmlCompletion({ uri, position }) {
+        const {
+            positionToOffset,
+            getWrappingTemplateName,
+        } = require("./text-utils");
+
+        const content = this.getFileContent(uri);
+        const offset = positionToOffset(content, position);
+        const textBefore = content.slice(0, offset);
+
+        // Only offer completions inside an open mustache.
+        const mustacheStart = textBefore.lastIndexOf("{{");
+        if (mustacheStart === -1) return;
+
+        const mustacheText = textBefore.slice(mustacheStart + 2);
+        if (mustacheText.includes("}}")) return;
+
+        // Closing a block ({{/each}}): nothing useful to offer.
+        if (mustacheText.startsWith("/")) return;
+
+        // {{> partial: offer template names.
+        if (mustacheText.startsWith(">")) {
+            return this.createTemplateNameCompletions();
+        }
+
+        const {
+            CompletionItem,
+            CompletionItemKind,
+        } = require("vscode-languageserver");
+
+        // Inside {{...}} or {{#block ...}}: offer the helpers of the
+        // wrapping template plus the global helpers.
+        const templateName = getWrappingTemplateName(content, offset);
+        const scopedHelpers =
+            (!!templateName &&
+                this.indexer.blazeIndexer.templateIndexMap[templateName]
+                    ?.helpers) ||
+            {};
+
+        return [
+            ...Object.keys(scopedHelpers).map((helperName) => ({
+                ...CompletionItem.create(helperName),
+                kind: CompletionItemKind.Function,
+                detail: `Helper of template "${templateName}"`,
+            })),
+            ...Object.keys(this.indexer.blazeIndexer.globalHelpersMap).map(
+                (helperName) => ({
+                    ...CompletionItem.create(helperName),
+                    kind: CompletionItemKind.Function,
+                    detail: "Global helper",
+                })
+            ),
+        ];
     }
 }
 
