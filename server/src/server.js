@@ -11,6 +11,7 @@ const { ReferencesProvider } = require("./references-provider");
 const { HoverProvider } = require("./hover-provider");
 const { SymbolsProvider } = require("./symbols-provider");
 const { DiagnosticsProvider } = require("./diagnostics-provider");
+const { HtmlFeaturesProvider } = require("./html-features-provider");
 const { Indexer } = require("./indexer");
 
 class ServerInstance {
@@ -77,6 +78,12 @@ class ServerInstance {
                 this.rootUri,
                 this.indexer
             );
+            this.htmlFeaturesProvider = new HtmlFeaturesProvider(
+                this.connection,
+                this.documents,
+                this.rootUri,
+                this.indexer
+            );
 
             return {
                 capabilities: {
@@ -86,6 +93,7 @@ class ServerInstance {
                     hoverProvider: true,
                     documentSymbolProvider: true,
                     workspaceSymbolProvider: true,
+                    foldingRangeProvider: true,
                     completionProvider: {
                         resolveProvider: "true",
                         triggerCharacters: ["."],
@@ -117,6 +125,9 @@ class ServerInstance {
         );
         this.connection.onWorkspaceSymbol((...params) =>
             this.symbolsProvider.onWorkspaceSymbolRequest(...params)
+        );
+        this.connection.onFoldingRanges((...params) =>
+            this.htmlFeaturesProvider.onFoldingRangesRequest(...params)
         );
         this.connection.onDidChangeConfiguration((...params) =>
             this.indexer.onDidChangeConfiguration(...params)

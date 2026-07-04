@@ -130,6 +130,11 @@
                 "path": "./spacebars/syntaxes/spacebars.tmLanguage.json"
             }
         ],
+        "configurationDefaults": {
+            "emmet.includeLanguages": {
+                "spacebars": "html"
+            }
+        },
         "typescriptServerPlugins": [
             {
                 "name": "typescript-meteor-toolbox-plugin",

@@ -82,27 +82,32 @@ describe("CompletionProvider - context aware HTML completion", () => {
         assert.ok(!labels.includes("formattedName"));
     });
 
-    it("offers nothing outside mustaches", () => {
-        // Inside <div> of foo.html, before any mustache.
-        const items = basicProvider.onCompletionRequest({
+    it("offers no Blaze items outside mustaches", () => {
+        // Inside <div> of foo.html, before any mustache: the HTML language
+        // service answers instead.
+        const result = basicProvider.onCompletionRequest({
             position: { line: 1, character: 8 },
             textDocument: {
                 uri: fixtureUri("basic-project", "client/foo.html"),
             },
         });
 
-        assert.strictEqual(items, undefined);
+        const labels = labelsOf(result?.items || result);
+        assert.ok(!labels.includes("formattedName"));
+        assert.ok(!labels.includes("foo"));
     });
 
-    it("offers nothing after a closed mustache", () => {
+    it("offers no Blaze items after a closed mustache", () => {
         // Right after {{peopleCount}} on line 4 (0-based 3) of foo.html.
-        const items = basicProvider.onCompletionRequest({
+        const result = basicProvider.onCompletionRequest({
             position: { line: 3, character: 29 },
             textDocument: {
                 uri: fixtureUri("basic-project", "client/foo.html"),
             },
         });
 
-        assert.strictEqual(items, undefined);
+        const labels = labelsOf(result?.items || result);
+        assert.ok(!labels.includes("formattedName"));
+        assert.ok(!labels.includes("peopleCount"));
     });
 });

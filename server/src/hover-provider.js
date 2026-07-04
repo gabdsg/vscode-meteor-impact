@@ -69,8 +69,17 @@ class HoverProvider extends ServerBase {
             require("@handlebars/parser").parse
         );
 
+        // Outside Blaze symbols, fall back to the embedded HTML language
+        // service (tag/attribute documentation).
+        const htmlHoverFallback = () =>
+            require("./html-language-service").getHtmlHover(
+                this.parseUri(uri),
+                content,
+                position
+            );
+
         const symbol = htmlWalker.getSymbolAtPosition(position);
-        if (!symbol) return;
+        if (!symbol) return htmlHoverFallback();
 
         const { blazeIndexer } = this.indexer;
 
@@ -92,7 +101,7 @@ class HoverProvider extends ServerBase {
             !htmlWalker.isPathExpression(symbol) &&
             !htmlWalker.isMustacheStatement(symbol)
         ) {
-            return;
+            return htmlHoverFallback();
         }
 
         const helperName = blazeIndexer.getHelperName(symbol);

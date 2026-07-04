@@ -138,12 +138,20 @@ class CompletionProvider extends ServerBase {
         const offset = positionToOffset(content, position);
         const textBefore = content.slice(0, offset);
 
-        // Only offer completions inside an open mustache.
+        // Outside a mustache, delegate to the embedded HTML language
+        // service so the regular HTML experience keeps working.
+        const delegateToHtml = () =>
+            require("./html-language-service").getHtmlCompletions(
+                this.parseUri(uri),
+                content,
+                position
+            );
+
         const mustacheStart = textBefore.lastIndexOf("{{");
-        if (mustacheStart === -1) return;
+        if (mustacheStart === -1) return delegateToHtml();
 
         const mustacheText = textBefore.slice(mustacheStart + 2);
-        if (mustacheText.includes("}}")) return;
+        if (mustacheText.includes("}}")) return delegateToHtml();
 
         // Closing a block ({{/each}}): nothing useful to offer.
         if (mustacheText.startsWith("/")) return;

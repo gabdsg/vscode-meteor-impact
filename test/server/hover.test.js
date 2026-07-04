@@ -98,9 +98,10 @@ describe("HoverProvider", () => {
         assert.ok(value.includes("methods.ts"));
     });
 
-    it("returns nothing for plain HTML content", async () => {
+    it("falls back to HTML hover for plain HTML content", async () => {
         const { indexer } = await loadFixtureIndexer("basic-project");
 
+        // Position on the <div> tag of foo.html.
         const hover = createProvider(indexer).onHoverRequest({
             position: { line: 1, character: 6 },
             textDocument: {
@@ -108,6 +109,8 @@ describe("HoverProvider", () => {
             },
         });
 
-        assert.strictEqual(hover, undefined);
+        assert.ok(hover, "Expected the HTML language service hover");
+        const value = hover.contents.value || `${hover.contents}`;
+        assert.ok(value.toLowerCase().includes("div"));
     });
 });
