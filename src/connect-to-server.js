@@ -26,6 +26,7 @@ const connectToLanguageServer = async (asAbsolutePath) => {
         documentSelector: [
             { scheme: "file", language: "html" },
             { scheme: "file", language: "javascript" },
+            { scheme: "file", language: "typescript" },
             { scheme: "file", language: "spacebars" },
         ],
         synchronize: {
