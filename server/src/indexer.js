@@ -19,6 +19,9 @@ class Indexer extends ServerBase {
         this.blazeIndexer = new BlazeIndexer();
         this.methodsAndPublicationsIndexer =
             new MethodsAndPublicationsIndexer();
+
+        const { PackagesIndexer } = require("./packages-indexer");
+        this.packagesIndexer = new PackagesIndexer();
     }
 
     async findUris(patterns) {
@@ -48,6 +51,9 @@ class Indexer extends ServerBase {
                         "**/**.tests.js",
                         "**/**.tests.ts",
                         "node_modules/**",
+                        // Build output and package metadata are not app
+                        // sources (packages are indexed separately).
+                        ".meteor/**",
                         ...directoriesToBeIgnored,
                     ],
                     absolute: true,
@@ -193,6 +199,9 @@ class Indexer extends ServerBase {
 
     async loadSources(globs = ["**/**{.js,.ts,.html}"]) {
         const uris = await this.findUris(globs);
+
+        // Read-only symbols provided by installed packages.
+        await this.packagesIndexer.load(this.rootUri);
 
         const parsingErrors = [];
         // Read and parse concurrently...

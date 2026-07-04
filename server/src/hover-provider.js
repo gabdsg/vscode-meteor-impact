@@ -87,7 +87,18 @@ class HoverProvider extends ServerBase {
         if (htmlWalker.isPartialStatement(symbol)) {
             const { node, uri: templateUri } =
                 blazeIndexer.getTemplateInfo(symbol);
-            if (!node || !templateUri) return;
+            if (!node || !templateUri) {
+                const packageTemplate =
+                    this.indexer.packagesIndexer?.templates[
+                        symbol.name?.original
+                    ];
+                if (!packageTemplate) return;
+
+                return this.createHover({
+                    name: symbol.name?.original,
+                    subtitle: `template from package \`${packageTemplate.packageName}\``,
+                });
+            }
 
             return this.createHover({
                 name: symbol.name?.original,

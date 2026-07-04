@@ -181,13 +181,24 @@ class CompletionProvider extends ServerBase {
         } = require("vscode-languageserver");
         const { NODE_NAMES } = require("./ast-helpers");
 
-        return Object.keys(this.indexer.blazeIndexer.templateIndexMap).map(
-            (templateName) => ({
+        const { templateIndexMap } = this.indexer.blazeIndexer;
+        const packageTemplates =
+            this.indexer.packagesIndexer?.templates || {};
+
+        return [
+            ...Object.keys(templateIndexMap).map((templateName) => ({
                 ...CompletionItem.create(templateName),
                 kind: CompletionItemKind.Class,
                 detail: NODE_NAMES.TEMPLATE,
-            })
-        );
+            })),
+            ...Object.entries(packageTemplates)
+                .filter(([templateName]) => !templateIndexMap[templateName])
+                .map(([templateName, { packageName }]) => ({
+                    ...CompletionItem.create(templateName),
+                    kind: CompletionItemKind.Class,
+                    detail: `Template (package ${packageName})`,
+                })),
+        ];
     }
 
     handleHtmlCompletion({ uri, position }) {

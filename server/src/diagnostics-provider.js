@@ -180,7 +180,8 @@ class DiagnosticsProvider extends ServerBase {
                         !partialName ||
                         node.name?.parts?.length > 1 ||
                         KNOWN_EXTERNAL_PARTIALS.includes(partialName) ||
-                        templateIndexMap[partialName]
+                        templateIndexMap[partialName] ||
+                        this.indexer.packagesIndexer?.templates[partialName]
                     ) {
                         return;
                     }
@@ -238,7 +239,8 @@ class DiagnosticsProvider extends ServerBase {
                         !!templateIndexMap[wrappingTemplateName]?.helpers?.[
                             helperName
                         ]) ||
-                    !!globalHelpersMap[helperName];
+                    !!globalHelpersMap[helperName] ||
+                    !!this.indexer.packagesIndexer?.globalHelpers[helperName];
                 if (isResolvable) return;
 
                 this.addDiagnostic(diagnosticsByUri, uri, {

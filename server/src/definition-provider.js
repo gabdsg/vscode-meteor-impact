@@ -324,9 +324,22 @@ class DefinitionProvider extends ServerBase {
             this.indexer.blazeIndexer.getTemplateInfo(symbol);
 
         /**
-         * Well, we tried but we didn't find anything useful.
+         * Not an app template: maybe an installed package provides it.
          */
-        if (!templateUri) return;
+        if (!templateUri) {
+            const packageTemplate =
+                this.indexer.packagesIndexer?.templates[
+                    symbol.name?.original
+                ];
+            if (!packageTemplate) return;
+
+            const { Location, Range } = require("vscode-languageserver");
+            const { line, column } = packageTemplate.loc;
+            return Location.create(
+                packageTemplate.uri.path,
+                Range.create(line - 1, column, line - 1, column)
+            );
+        }
 
         const { Location, Range } = require("vscode-languageserver");
 
