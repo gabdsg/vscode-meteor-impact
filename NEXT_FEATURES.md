@@ -40,4 +40,4 @@ Rounds A and B are implemented too:
 - **Data context inference** (full version): run the TypeScript checker
   against code-behind files to know helper return types and offer property
   completions inside `{{#each}}`/`{{#with}}` blocks. Consider building it
-  into `typescript-meteor-toolbox-plugin` instead of the language server.
+  into `typescript-meteor-impact-plugin` instead of the language server.

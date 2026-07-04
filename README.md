@@ -43,9 +43,18 @@ Works in `.js`, `.ts` and Spacebars `.html` files:
 -   **Hover, signature help, outline/breadcrumbs, workspace symbol search,
     folding, linked tag editing and Spacebars formatting** (with mustache
     block indentation).
+-   **Method/publication safety**: calls to unknown methods or
+    subscriptions to unknown publications are flagged, with quick fixes to
+    create the stub; unused methods/publications are hinted.
 -   **Template scaffolding**: right-click a folder -> `Create Blaze
     Template` generates the folder with the `.html`, `.js`/`.ts` (imports and
-    `onCreated`/`helpers`/`events` stubs) and optional `.less`/`.css` files.
+    `onCreated`/`helpers`/`events` stubs) and optional `.less`/`.css` files;
+    `Rename Blaze Template` renames the folder, files, imports and every
+    usage together.
+-   **Snippets**: Blaze block snippets (usable with "Surround With") and
+    Meteor lifecycle/method/publication snippets in JS/TS.
+-   **.meteor/packages intelligence**: hover shows the resolved version,
+    completion offers installed packages.
 
 The index follows unsaved edits incrementally, so results stay fresh while
 you type.
@@ -54,6 +63,18 @@ you type.
 
 `Create Blaze Template` -> Scaffold a new template folder (also in the
 explorer context menu).
+
+`Rename Blaze Template` -> Rename a template folder, its files and every
+usage (also in the explorer context menu).
+
+`Go to Template Counterpart` (Alt+O) -> Cycle between a template's .html,
+code-behind and style files.
+
+`Nest Template Files Under Code-Behind` -> Explorer file nesting for
+template folders (writes workspace settings).
+
+`Generate Meteor.settings Types` -> Generate meteor-settings.d.ts from
+settings.json for typed Meteor.settings access.
 
 `Toggle Meteor Impact Auto Run` -> Toggle file watcher for packages folders.
 

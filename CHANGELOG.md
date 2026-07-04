@@ -6,6 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [2.0.0] - 04/07/26
 
+-   Flag calls to unknown methods/publications with create-stub quick fixes, and hint unused ones.
+-   Add "Go to Template Counterpart" (Alt+O) cycling html -> code-behind -> style.
+-   Add "Rename Blaze Template" renaming the folder, files, imports and all usages together.
+-   Add explorer file nesting for template files, Blaze/Meteor snippets (Surround With support), .meteor/packages hover/completion, and "Generate Meteor.settings Types".
 -   Rename the extension to **Meteor Impact** (`gabdsg.meteor-impact`), forked from Meteor Toolbox. BREAKING: all identifiers changed - commands are now `meteorImpact.*` and the settings key is `conf.settingsEditor.meteorImpact` (update your settings.json/keybindings), the diagnostics source is `meteor-impact` and the TS server plugin is `typescript-meteor-impact-plugin`.
 -   Add a "Create Blaze Template" explorer context menu: scaffolds a folder with the template HTML, a .js or .ts code-behind (asked via prompt, importing the HTML/style and stubbing onCreated/helpers/events) and optionally a .less/.css file (less when the meteor less package is installed).
 -   Add "Extract selection to template" refactoring: prompts for the template name, moves the selected HTML into a new template, replaces it with a partial (passing outer block variables as arguments), and moves or copies the helpers and events the selection uses.
