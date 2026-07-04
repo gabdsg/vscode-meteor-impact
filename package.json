@@ -104,8 +104,28 @@
                 "category": "Commands",
                 "command": "config.commands.meteorToolbox.regenerateLaunchJson",
                 "title": "Re-create Meteor Toolbox run/debug options"
+            },
+            {
+                "category": "Commands",
+                "command": "meteorToolbox.createTemplate",
+                "title": "Create Blaze Template"
             }
         ],
+        "menus": {
+            "explorer/context": [
+                {
+                    "command": "meteorToolbox.createTemplate",
+                    "when": "meteorToolbox.isMeteorProject && explorerResourceIsFolder",
+                    "group": "2_workspace"
+                }
+            ],
+            "commandPalette": [
+                {
+                    "command": "meteorToolbox.createTemplate",
+                    "when": "meteorToolbox.isMeteorProject"
+                }
+            ]
+        },
         "languages": [
             {
                 "id": "spacebars",

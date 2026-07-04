@@ -17,6 +17,7 @@ const {
     connectToLanguageServer,
     stopServer,
 } = require("./src/connect-to-server");
+const { createTemplate } = require("./src/create-template");
 
 const createOrUpdateJsConfigFile = () => {
     generateBaseJsConfig();
@@ -45,8 +46,20 @@ async function activate(context) {
 
     console.log("Starting Meteor Toolbox extension...");
 
+    // Gates the explorer context menu contributions.
+    vscode.commands.executeCommand(
+        "setContext",
+        "meteorToolbox.isMeteorProject",
+        true
+    );
+
     addDebugAndRunOptions();
     createOrUpdateJsConfigFile();
+
+    const createTemplateDisposable = vscode.commands.registerCommand(
+        "meteorToolbox.createTemplate",
+        createTemplate
+    );
 
     const toggleAutoRunPackagesWatcherDisposable =
         vscode.commands.registerCommand(
@@ -139,7 +152,8 @@ async function activate(context) {
         runOnceDisposable,
         restartDisposer,
         clearMeteorBuildCacheDisposable,
-        regenerateLaunchJsonDisposable
+        regenerateLaunchJsonDisposable,
+        createTemplateDisposable
     );
 }
 
