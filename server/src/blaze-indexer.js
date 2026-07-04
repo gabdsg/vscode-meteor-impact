@@ -12,6 +12,58 @@ class BlazeIndexer {
         this.eventsMap = {};
         // Template name -> every Template.X / Template["x"] JS reference.
         this.templateJsReferences = {};
+        // Template name -> selector (".class" / "#id") -> locations of the
+        // class/id tokens in the template HTML.
+        this.templateSelectorsMap = {};
+    }
+
+    /**
+     * Index the class/id attribute tokens of every template in an HTML
+     * file, keyed as CSS-like selectors, to connect event maps with the
+     * elements they target.
+     */
+    indexTemplateSelectors({ uri, fileContent }) {
+        const {
+            offsetToLoc,
+            getWrappingTemplateName,
+        } = require("./text-utils");
+
+        const ATTRIBUTE_REGEX = /\b(class|id)=["']([^"']*)["']/g;
+
+        for (const match of fileContent.matchAll(ATTRIBUTE_REGEX)) {
+            const templateName = getWrappingTemplateName(
+                fileContent,
+                match.index
+            );
+            if (!templateName) continue;
+
+            const prefix = match[1] === "class" ? "." : "#";
+            const valueStart = match.index + match[1].length + 2;
+
+            for (const token of match[2].matchAll(/[\w-]+/g)) {
+                const selector = `${prefix}${token[0]}`;
+                const startOffset = valueStart + token.index;
+                const endOffset = startOffset + token[0].length;
+                const entryKey = `${uri.fsPath}${startOffset}`;
+
+                this.templateSelectorsMap[templateName] =
+                    this.templateSelectorsMap[templateName] || {};
+                const entries = (this.templateSelectorsMap[templateName][
+                    selector
+                ] = this.templateSelectorsMap[templateName][selector] || []);
+
+                if (entries.some(({ entryKey: e }) => e === entryKey)) {
+                    continue;
+                }
+
+                entries.push({
+                    start: offsetToLoc(fileContent, startOffset),
+                    end: offsetToLoc(fileContent, endOffset),
+                    uri,
+                    entryKey,
+                });
+            }
+        }
     }
 
     addHelpersToMap({ templateName, helperName, value, uri, kind, key }) {
@@ -448,6 +500,24 @@ class BlazeIndexer {
                 this.templateJsReferences[name] = remaining;
             }
         }
+
+        for (const [templateName, selectors] of Object.entries(
+            this.templateSelectorsMap
+        )) {
+            for (const [selector, entries] of Object.entries(selectors)) {
+                const remaining = entries.filter(({ uri }) => !matches(uri));
+
+                if (!remaining.length) {
+                    delete selectors[selector];
+                } else if (remaining.length !== entries.length) {
+                    selectors[selector] = remaining;
+                }
+            }
+
+            if (!Object.keys(selectors).length) {
+                delete this.templateSelectorsMap[templateName];
+            }
+        }
     }
 
     reset() {
@@ -456,6 +526,7 @@ class BlazeIndexer {
         this.globalHelpersMap = {};
         this.eventsMap = {};
         this.templateJsReferences = {};
+        this.templateSelectorsMap = {};
     }
 }
 

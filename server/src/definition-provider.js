@@ -44,6 +44,11 @@ class DefinitionProvider extends ServerBase {
             }) ||
             this.indexer.blazeIndexer.getGlobalHelper(nodeKey);
         if (!definitionInfo) {
+            // Event key ("click .js-save"): jump to the elements the
+            // selector targets in the template HTML.
+            const selectorLocations = this.getEventSelectorLocations(nodeKey);
+            if (selectorLocations?.length) return selectorLocations;
+
             /**
              * This is a "hack": as we want the references, we need to return the current
              * node location. The problem is that this add unnecessary "definitions" sometimes.
@@ -79,6 +84,56 @@ class DefinitionProvider extends ServerBase {
                 _end.column
             )
         );
+    }
+
+    /**
+     * For an event map key like "click .js-save", return the locations of
+     * the matching class/id tokens in the HTML of the templates that define
+     * a handler for it.
+     */
+    getEventSelectorLocations(nodeKey) {
+        const { blazeIndexer } = this.indexer;
+        if (
+            typeof nodeKey !== "string" ||
+            !blazeIndexer.eventsMap[nodeKey]
+        ) {
+            return;
+        }
+
+        const selectors = nodeKey.match(/[.#][\w-]+/g);
+        if (!selectors?.length) return;
+
+        const { Location, Range } = require("vscode-languageserver");
+
+        const locations = [];
+        for (const [templateName, template] of Object.entries(
+            blazeIndexer.templateIndexMap
+        )) {
+            if (!template.events?.[nodeKey]) continue;
+
+            for (const selector of selectors) {
+                const entries =
+                    blazeIndexer.templateSelectorsMap[templateName]?.[
+                        selector
+                    ] || [];
+
+                for (const { start, end, uri } of entries) {
+                    locations.push(
+                        Location.create(
+                            uri.path,
+                            Range.create(
+                                start.line - 1,
+                                start.column,
+                                end.line - 1,
+                                end.column
+                            )
+                        )
+                    );
+                }
+            }
+        }
+
+        return locations;
     }
 
     handleFileSpacebarsHTML({ uri, position }) {

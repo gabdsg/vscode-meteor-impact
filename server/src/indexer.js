@@ -60,7 +60,7 @@ class Indexer extends ServerBase {
         return [...new Set(uris).values()].sort().map(this.parseUri);
     }
 
-    indexHtmlFile({ uri, astWalker }) {
+    indexHtmlFile({ uri, astWalker, fileContent }) {
         if (!astWalker || !uri) {
             throw new Error(
                 `Expected to receive uri and astWalker, but got: ${uri} and ${astWalker}`
@@ -73,6 +73,10 @@ class Indexer extends ServerBase {
                 node,
             });
         });
+
+        if (fileContent) {
+            this.blazeIndexer.indexTemplateSelectors({ uri, fileContent });
+        }
     }
 
     indexJsFile({ uri, astWalker }) {
@@ -134,10 +138,10 @@ class Indexer extends ServerBase {
     }
 
     indexFileInfo(fileInfo) {
-        const { uri, astWalker } = fileInfo;
+        const { uri, astWalker, fileContent } = fileInfo;
 
         if (this.isFileSpacebarsHTML(uri)) {
-            this.indexHtmlFile({ uri, astWalker });
+            this.indexHtmlFile({ uri, astWalker, fileContent });
         } else {
             this.indexJsFile({ uri, astWalker });
         }
@@ -187,16 +191,14 @@ class Indexer extends ServerBase {
         const uris = await this.findUris(globs);
 
         const parsingErrors = [];
+        // Read and parse concurrently...
         const results = await Promise.all(
             uris.map(async (uri) => {
                 try {
-                    const fileInfo = this.parseFile({
+                    return this.parseFile({
                         uri,
                         fileContent: await this.getFileContentPromise(uri),
                     });
-
-                    this.indexFileInfo(fileInfo);
-                    return fileInfo;
                 } catch (e) {
                     console.error(`Error parsing ${uri}. ${e}`);
                     parsingErrors.push({ uri, error: e });
@@ -206,6 +208,10 @@ class Indexer extends ServerBase {
         );
 
         const validResults = results.filter(Boolean);
+
+        // ...but index sequentially in sorted-uri order, so that
+        // last-write-wins entries don't depend on I/O completion order.
+        validResults.forEach((fileInfo) => this.indexFileInfo(fileInfo));
 
         // Second pass, once every definition is known.
         validResults.forEach((fileInfo) => {

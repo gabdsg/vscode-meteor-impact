@@ -55,7 +55,69 @@ class CompletionProvider extends ServerBase {
         );
     }
 
+    // An open string whose last token starts a CSS-like selector, e.g
+    // `"click .js-`.
+    static EVENT_SELECTOR_REGEX = /["'`][^"'`]*([.#])[\w-]*$/;
+    static EVENTS_CALL_REGEX =
+        /Template(?:\.(\w+)|\[["']([^"']+)["']\])\s*\.events\s*\(/g;
+
+    getEventSelectorCompletions({ uri, position }) {
+        const content = this.getFileContent(uri);
+        const linePrefix = (content.split("\n")[position.line] || "").slice(
+            0,
+            position.character
+        );
+
+        const selectorMatch = linePrefix.match(
+            CompletionProvider.EVENT_SELECTOR_REGEX
+        );
+        if (!selectorMatch) return;
+
+        // Find the enclosing Template.X.events( call.
+        const { positionToOffset } = require("./text-utils");
+        const textBefore = content.slice(
+            0,
+            positionToOffset(content, position)
+        );
+
+        let templateName;
+        let callEnd = -1;
+        for (const match of textBefore.matchAll(
+            CompletionProvider.EVENTS_CALL_REGEX
+        )) {
+            templateName = match[1] || match[2];
+            callEnd = match.index + match[0].length;
+        }
+        if (!templateName || textBefore.slice(callEnd).includes("});")) return;
+
+        const {
+            CompletionItem,
+            CompletionItemKind,
+        } = require("vscode-languageserver");
+
+        const prefixChar = selectorMatch[1];
+        const selectors =
+            this.indexer.blazeIndexer.templateSelectorsMap[templateName] || {};
+
+        return Object.keys(selectors)
+            .filter((selector) => selector.startsWith(prefixChar))
+            .map((selector) => ({
+                ...CompletionItem.create(selector.slice(1)),
+                kind: CompletionItemKind.Value,
+                detail: `${
+                    prefixChar === "." ? "class" : "id"
+                } in template "${templateName}"`,
+            }));
+    }
+
     handleJsCompletion({ uri, position }) {
+        // Completing a selector inside an event map key?
+        const selectorItems = this.getEventSelectorCompletions({
+            uri,
+            position,
+        });
+        if (selectorItems) return selectorItems;
+
         // Completing a method/publication name string?
         const methodOrPublicationItems = this.getMethodOrPublicationCompletions(
             { uri, position }

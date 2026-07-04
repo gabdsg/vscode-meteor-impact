@@ -77,10 +77,12 @@ class ReferencesProvider extends ServerBase {
     handleHtmlReferences({ position, uri, context }) {
         const { AstWalker, NODE_TYPES } = require("./ast-helpers");
 
+        const content = this.getFileContent(uri);
+
         let htmlWalker;
         try {
             htmlWalker = new AstWalker(
-                this.getFileContent(uri),
+                content,
                 require("@handlebars/parser").parse
             );
         } catch (e) {
@@ -89,17 +91,21 @@ class ReferencesProvider extends ServerBase {
         }
 
         const symbol = htmlWalker.getSymbolAtPosition(position);
-        if (!symbol) return;
-
-        const isPartial = htmlWalker.isPartialStatement(symbol);
+        const isPartial = !!symbol && htmlWalker.isPartialStatement(symbol);
         if (
-            !isPartial &&
-            ![
-                NODE_TYPES.PATH_EXPRESSION,
-                NODE_TYPES.MUSTACHE_STATEMENT,
-            ].includes(symbol.type)
+            !symbol ||
+            (!isPartial &&
+                ![
+                    NODE_TYPES.PATH_EXPRESSION,
+                    NODE_TYPES.MUSTACHE_STATEMENT,
+                ].includes(symbol.type))
         ) {
-            return;
+            // Not a Blaze symbol: maybe a class/id token targeted by an
+            // event map.
+            return this.findEventHandlersForSelector({
+                content,
+                position,
+            });
         }
 
         const { blazeIndexer } = this.indexer;
@@ -137,6 +143,73 @@ class ReferencesProvider extends ServerBase {
         }
 
         return this.createLocations(allEntries);
+    }
+
+    /**
+     * With the cursor on a class/id token inside a class="..."/id="..."
+     * attribute, return every event map key targeting that selector on the
+     * wrapping template.
+     */
+    findEventHandlersForSelector({ content, position }) {
+        const ATTRIBUTE_REGEX = /\b(class|id)=["']([^"']*)["']/g;
+
+        const line = content.split("\n")[position.line] || "";
+        for (const match of line.matchAll(ATTRIBUTE_REGEX)) {
+            const valueStart = match.index + match[1].length + 2;
+
+            for (const token of match[2].matchAll(/[\w-]+/g)) {
+                const tokenStart = valueStart + token.index;
+                const tokenEnd = tokenStart + token[0].length;
+                if (
+                    position.character < tokenStart ||
+                    position.character > tokenEnd
+                ) {
+                    continue;
+                }
+
+                const selector = `${match[1] === "class" ? "." : "#"}${
+                    token[0]
+                }`;
+                return this.getHandlerLocationsForSelector({
+                    content,
+                    position,
+                    selector,
+                });
+            }
+        }
+
+        return;
+    }
+
+    getHandlerLocationsForSelector({ content, position, selector }) {
+        const {
+            positionToOffset,
+            getWrappingTemplateName,
+        } = require("./text-utils");
+
+        const templateName = getWrappingTemplateName(
+            content,
+            positionToOffset(content, position)
+        );
+        if (!templateName) return;
+
+        const { templateIndexMap, eventsMap } = this.indexer.blazeIndexer;
+
+        const matchingEventKeys = Object.keys(
+            templateIndexMap[templateName]?.events || {}
+        ).filter((eventKey) =>
+            (eventKey.match(/[.#][\w-]+/g) || []).includes(selector)
+        );
+        if (!matchingEventKeys.length) return;
+
+        // eventsMap holds every definition of the key (event maps can be
+        // split across files).
+        const entries = matchingEventKeys.flatMap(
+            (eventKey) => eventsMap[eventKey] || []
+        );
+        if (!entries.length) return;
+
+        return this.createLocations(entries);
     }
 }
 
