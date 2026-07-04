@@ -3,7 +3,12 @@
 test/**
 .gitignore
 .yarnrc
+.npmrc
+.prettierrc
 vsc-extension-quickstart.md
+NEXT_FEATURES.md
+images/demo/**
 **/jsconfig.json
 **/*.map
 **/.eslintrc.json
+.claude/**
