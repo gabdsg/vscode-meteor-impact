@@ -6,6 +6,8 @@ class BlazeIndexer {
     constructor() {
         this.templateIndexMap = {};
         this.htmlUsageMap = {};
+        // Global helpers registered with Template.registerHelper("name", fn).
+        this.globalHelpersMap = {};
     }
 
     addHelpersToMap({ templateName, helperName, value, uri }) {
@@ -62,6 +64,34 @@ class BlazeIndexer {
         return this.htmlUsageMap[key].push({ node, uri, entryKey });
     }
 
+    indexGlobalHelpers({ node, uri }) {
+        const { NODE_TYPES, NODE_NAMES } = require("./ast-helpers");
+        const { TEMPLATE_CALLERS } = require("./constants");
+
+        const callee = node.callee;
+        if (
+            callee.object?.type !== NODE_TYPES.IDENTIFIER ||
+            callee.object.name !== NODE_NAMES.TEMPLATE ||
+            callee.property.name !== TEMPLATE_CALLERS.REGISTER_HELPER
+        )
+            return;
+
+        const [helperNameArgument] = node.arguments || [];
+        if (
+            helperNameArgument?.type !== NODE_TYPES.LITERAL ||
+            typeof helperNameArgument.value !== "string"
+        )
+            return;
+
+        const { start, end } = helperNameArgument.loc;
+        this.globalHelpersMap[helperNameArgument.value] = {
+            node: helperNameArgument,
+            start,
+            end,
+            uri,
+        };
+    }
+
     indexHelpers({ node, uri }) {
         const { NODE_TYPES } = require("./ast-helpers");
 
@@ -72,15 +102,14 @@ class BlazeIndexer {
         const { TEMPLATE_CALLERS } = require("./constants");
 
         const callee = node.callee;
-        if (
-            !callee ||
-            callee.type !== NODE_TYPES.MEMBER_EXPRESSION ||
-            callee.property.name !== TEMPLATE_CALLERS.HELPERS
-        )
-            return;
+        if (!callee || callee.type !== NODE_TYPES.MEMBER_EXPRESSION) return;
+
+        this.indexGlobalHelpers({ node, uri });
+
+        if (callee.property.name !== TEMPLATE_CALLERS.HELPERS) return;
 
         const templateNameProperty = callee.object.property;
-        if (templateNameProperty.type !== NODE_TYPES.IDENTIFIER) return;
+        if (templateNameProperty?.type !== NODE_TYPES.IDENTIFIER) return;
 
         const templateName = templateNameProperty.name;
 
@@ -153,7 +182,7 @@ class BlazeIndexer {
         this.templateIndexMap[matches[1]] = { node, uri };
     }
 
-    getHelperFromTemplate({ templateName, helper, templateUri }) {
+    getHelperName(helper) {
         const _name =
             (typeof helper === "string" && helper) ||
             helper.parts?.[0] ||
@@ -166,6 +195,16 @@ class BlazeIndexer {
                 `Expected to receive helperName, but got ${helper}`
             );
         }
+
+        return _name;
+    }
+
+    getGlobalHelper(helper) {
+        return this.globalHelpersMap[this.getHelperName(helper)];
+    }
+
+    getHelperFromTemplate({ templateName, helper, templateUri }) {
+        const _name = this.getHelperName(helper);
 
         let indexMap = this.templateIndexMap[templateName];
         if (!indexMap && !!templateUri) {
@@ -209,6 +248,7 @@ class BlazeIndexer {
     reset() {
         this.templateIndexMap = {};
         this.htmlUsageMap = {};
+        this.globalHelpersMap = {};
     }
 }
 

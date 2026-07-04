@@ -41,7 +41,8 @@ class DefinitionProvider extends ServerBase {
             this.indexer.blazeIndexer.getHelperFromTemplate({
                 templateUri: this.parseUri(uri),
                 helper: nodeKey,
-            });
+            }) ||
+            this.indexer.blazeIndexer.getGlobalHelper(nodeKey);
         if (!definitionInfo) {
             /**
              * This is a "hack": as we want the references, we need to return the current
@@ -354,19 +355,17 @@ class DefinitionProvider extends ServerBase {
 
     handleMustacheStatement({ symbol, uri }) {
         const wrappingTemplate = this.getWrappingTemplate({ uri, symbol });
-        if (!wrappingTemplate) return;
+        const templateName = wrappingTemplate?.attrs?.name;
 
-        const templateName = wrappingTemplate.attrs.name;
-        if (!templateName) {
-            throw new Error(
-                `Expected to find template name. Found: ${templateName}`
-            );
-        }
-
-        const helper = this.indexer.blazeIndexer.getHelperFromTemplate({
-            templateName,
-            helper: symbol,
-        });
+        // If the mustache doesn't match a template-scoped helper, fall back
+        // to helpers registered globally with Template.registerHelper().
+        const helper =
+            (!!templateName &&
+                this.indexer.blazeIndexer.getHelperFromTemplate({
+                    templateName,
+                    helper: symbol,
+                })) ||
+            this.indexer.blazeIndexer.getGlobalHelper(symbol);
 
         const { start, end, uri: helperUri } = helper || {};
         if (!start || !end) {

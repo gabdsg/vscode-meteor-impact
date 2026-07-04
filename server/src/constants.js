@@ -16,6 +16,7 @@ const TEMPLATE_CALLERS = {
     HELPERS: "helpers",
     ON_CREATED: "onCreated",
     ON_RENDERED: "onRendered",
+    REGISTER_HELPER: "registerHelper",
 };
 
 const TAG_NAMES = {
