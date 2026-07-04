@@ -6,6 +6,11 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [04/07/26]
 
+-   Embed the HTML language service: HTML completion, hover, folding ranges and Emmet now work in Spacebars files alongside the Blaze features.
+-   Add rename refactoring for helpers, templates, methods/publications and event keys, updating definitions and usages together.
+-   Reindex changed files incrementally (following unsaved edits) instead of reindexing the whole project on every change.
+-   Add document and range formatting for Spacebars files, with mustache block indentation.
+-   Fix method/publication usages not being indexed when the defining file sorted after the using file.
 -   Offer context-aware completions in Spacebars templates: helpers of the wrapping template and global helpers inside `{{...}}`, template names after `{{>`.
 -   Complete method and publication names inside `Meteor.call`/`callAsync`/`subscribe` string arguments.
 -   Support find-references from HTML files (mustaches and partials), including definitions.
