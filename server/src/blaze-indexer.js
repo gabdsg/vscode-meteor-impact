@@ -174,12 +174,46 @@ class BlazeIndexer {
             return;
         }
 
-        const regex = /template name=[\"\'](.*)[\"\']/g;
-        const matches = regex.exec(original);
+        const regex = /template\s+name=["']([^"']+)["']/g;
 
-        if (!matches || !matches.length) return;
+        // A single content chunk can contain multiple <template> tags, so
+        // walk all the matches and compute the precise location of each tag
+        // instead of pointing at the whole chunk.
+        for (const match of original.matchAll(regex)) {
+            const templateName = match[1];
+            const loc = {
+                start: this.getPositionInContent(node, match.index),
+                end: this.getPositionInContent(
+                    node,
+                    match.index + match[0].length
+                ),
+            };
 
-        this.templateIndexMap[matches[1]] = { node, uri };
+            // Merge with any existing entry so that helpers already indexed
+            // from the code-behind file are not clobbered.
+            this.templateIndexMap[templateName] = {
+                ...this.templateIndexMap[templateName],
+                node: { ...node, loc },
+                uri,
+            };
+        }
+    }
+
+    /**
+     * Translate an offset inside a ContentStatement raw string into an
+     * absolute line/column position, based on the node location.
+     */
+    getPositionInContent({ original, loc }, offset) {
+        const consumedLines = original.slice(0, offset).split("\n");
+        const lineOffset = consumedLines.length - 1;
+
+        return {
+            line: loc.start.line + lineOffset,
+            column:
+                lineOffset === 0
+                    ? loc.start.column + offset
+                    : consumedLines[lineOffset].length,
+        };
     }
 
     getHelperName(helper) {
