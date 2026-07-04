@@ -92,6 +92,10 @@ This extension only runs inside a Meteor project.
 
 ## Extension Settings
 
+See [SETTINGS.md](./SETTINGS.md) for the full settings reference,
+including the editor settings that unlock format-on-save, linked tag
+editing, string completions and semantic colors.
+
 -   `auto` -> Enable the file watcher for local packages. You can also set this option by running the command `Toggle Meteor Impact Auto Run` (it is enabled by default).
 
 -   `port` -> Set the port to use for meteor run/debug. Default to 3000.
