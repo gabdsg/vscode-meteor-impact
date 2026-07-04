@@ -46,6 +46,20 @@ describe("BlazeIndexer - Template.registerHelper", () => {
         assert.strictEqual(location.range.start.line, 2);
     });
 
+    it("resolves global helpers inside templates that have no scoped helpers", () => {
+        // Position of "formatCurrency" inside the "about" template, which
+        // has no code-behind helpers at all.
+        const location = definitionProvider.onDefinitionRequest({
+            position: { line: 5, character: 12 },
+            textDocument: {
+                uri: fixtureUri("global-helpers-project", "client/main.html"),
+            },
+        });
+
+        assert.ok(location, "Expected a definition location");
+        assert.ok(location.uri.endsWith("global-helpers.ts"));
+    });
+
     it("still resolves template-scoped helpers first", () => {
         // Position of "price" inside {{formatCurrency price}}.
         const location = definitionProvider.onDefinitionRequest({

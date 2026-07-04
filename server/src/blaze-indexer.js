@@ -281,7 +281,8 @@ class BlazeIndexer {
             indexMap = !!fromTemplate && this.templateIndexMap[fromTemplate];
         }
 
-        if (!indexMap || !Object.keys(indexMap.helpers).length) return;
+        // Templates without a code-behind file have no helpers indexed.
+        if (!indexMap || !Object.keys(indexMap.helpers || {}).length) return;
 
         return indexMap.helpers[_name];
     }
