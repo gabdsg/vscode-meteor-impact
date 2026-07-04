@@ -1,5 +1,6 @@
 let client;
 let extractTemplateCommandDisposable;
+let renameTemplateCommandDisposable;
 
 /**
  * The "Extract selection to template..." code action carries this command:
@@ -80,6 +81,14 @@ const connectToLanguageServer = async (asAbsolutePath) => {
     setupNotifications();
     registerExtractTemplateCommand();
 
+    const { commands } = require("vscode");
+    const { renameTemplate } = require("./rename-template");
+    renameTemplateCommandDisposable?.dispose?.();
+    renameTemplateCommandDisposable = commands.registerCommand(
+        "meteorImpact.renameTemplate",
+        (clickedUri) => renameTemplate(clickedUri, client)
+    );
+
     return client;
 };
 
@@ -106,6 +115,8 @@ const setupNotifications = () => {
 const stopServer = () => {
     extractTemplateCommandDisposable?.dispose?.();
     extractTemplateCommandDisposable = undefined;
+    renameTemplateCommandDisposable?.dispose?.();
+    renameTemplateCommandDisposable = undefined;
 
     if (!client) return;
     client.stop();

@@ -186,6 +186,12 @@ class ServerInstance {
         this.connection.onRequest("meteorImpact/extractTemplate", (params) =>
             this.codeActionsProvider.executeExtractTemplate(params)
         );
+        // Symbol/import edits for the client's template folder rename.
+        this.connection.onRequest(
+            "meteorImpact/renameTemplateFiles",
+            (params) =>
+                this.renameProvider.executeTemplateFolderRename(params)
+        );
         this.connection.languages.semanticTokens.on((...params) =>
             this.semanticTokensProvider.onSemanticTokensRequest(...params)
         );

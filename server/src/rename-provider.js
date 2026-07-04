@@ -384,6 +384,109 @@ class RenameProvider extends ServerBase {
         }
     }
 
+    /**
+     * Symbol + import-specifier edits for a template folder rename, applied
+     * through workspace/applyEdit. The client renames the files/folder
+     * afterwards, so the import edits point at the NEW basenames.
+     */
+    async executeTemplateFolderRename({ folderUri, oldName, newName }) {
+        const fail = (message) => {
+            this.serverInstance.window?.showErrorMessage?.(message);
+            return { applied: false, reason: message };
+        };
+
+        try {
+            if (!newName || !/^[\w-]+$/.test(newName)) {
+                return fail(`"${newName}" is not a valid template name.`);
+            }
+
+            if (this.indexer.blazeIndexer.templateIndexMap[newName]) {
+                return fail(
+                    `A template named "${newName}" already exists.`
+                );
+            }
+
+            // Template.oldName property references can't survive a rename
+            // to a non-identifier name.
+            const jsReferences =
+                this.indexer.blazeIndexer.templateJsReferences[oldName] || [];
+            if (
+                jsReferences.some(({ isLiteral }) => !isLiteral) &&
+                !/^[A-Za-z_$][\w$]*$/.test(newName)
+            ) {
+                return fail(
+                    `"${newName}" is not a valid identifier, but Template.${oldName} property references exist. Pick an identifier-safe name.`
+                );
+            }
+
+            const changes = this.buildEdits(
+                { kind: "template", name: oldName },
+                newName
+            );
+
+            this.addImportSpecifierEdits({
+                folderUri,
+                oldName,
+                newName,
+                changes,
+            });
+
+            if (!Object.keys(changes).length) {
+                return fail(`Nothing to rename for template "${oldName}".`);
+            }
+
+            await this.serverInstance.workspace.applyEdit({ changes });
+            return { applied: true };
+        } catch (e) {
+            console.error(`Template folder rename failed. ${e}`);
+            return fail(`Template rename failed: ${e.message}`);
+        }
+    }
+
+    // Rewrite import "./old.html|less|css" specifiers inside the folder's
+    // code-behind files to the new basename.
+    addImportSpecifierEdits({ folderUri, oldName, newName, changes }) {
+        const { TextEdit, Range } = require("vscode-languageserver");
+        const { offsetToLoc } = require("./text-utils");
+
+        const folderFsPath = this.parseUri(folderUri).fsPath;
+        const specifierRegex = new RegExp(
+            `(["'])\\./${oldName}(\\.(?:html|less|css))\\1`,
+            "g"
+        );
+
+        for (const extension of [".ts", ".js"]) {
+            const scriptFsPath = require("path").join(
+                folderFsPath,
+                `${oldName}${extension}`
+            );
+            const source = this.indexer.getSources()[scriptFsPath];
+            if (!source?.fileContent) continue;
+
+            const uriString = source.uri.toString();
+            for (const match of source.fileContent.matchAll(specifierRegex)) {
+                const start = offsetToLoc(source.fileContent, match.index);
+                const end = offsetToLoc(
+                    source.fileContent,
+                    match.index + match[0].length
+                );
+
+                changes[uriString] = changes[uriString] || [];
+                changes[uriString].push(
+                    TextEdit.replace(
+                        Range.create(
+                            start.line - 1,
+                            start.column,
+                            end.line - 1,
+                            end.column
+                        ),
+                        `${match[1]}./${newName}${match[2]}${match[1]}`
+                    )
+                );
+            }
+        }
+    }
+
     // Edit the name="..." attribute of every <template> tag with this name.
     addTemplateTagEdits(name, addEdit) {
         const { Range } = require("vscode-languageserver");

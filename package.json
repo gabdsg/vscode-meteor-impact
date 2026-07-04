@@ -126,6 +126,11 @@
                 "category": "Commands",
                 "command": "meteorImpact.generateSettingsTypes",
                 "title": "Generate Meteor.settings Types"
+            },
+            {
+                "category": "Commands",
+                "command": "meteorImpact.renameTemplate",
+                "title": "Rename Blaze Template"
             }
         ],
         "keybindings": [
@@ -139,6 +144,11 @@
             "explorer/context": [
                 {
                     "command": "meteorImpact.createTemplate",
+                    "when": "meteorImpact.isMeteorProject && explorerResourceIsFolder",
+                    "group": "2_workspace"
+                },
+                {
+                    "command": "meteorImpact.renameTemplate",
                     "when": "meteorImpact.isMeteorProject && explorerResourceIsFolder",
                     "group": "2_workspace"
                 }
