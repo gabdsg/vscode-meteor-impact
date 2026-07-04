@@ -25,6 +25,8 @@ Rounds A and B are implemented too:
   get semantic colors; unresolved paths keep the grammar color)
 - ~~Signature help~~ (`{{helper |}}` and `Meteor.call("x", |)`, with TS
   parameter annotations preserved)
+- ~~Extract template refactor~~ (selection -> new `<template>` + `{{> partial}}`;
+  rename the generated placeholder name with F2)
 
 ## Ideas for future rounds
 
@@ -34,9 +36,6 @@ Rounds A and B are implemented too:
   sources of installed packages from `~/.meteor/packages` read-only, so
   package templates (e.g. `loginButtons`) get go-to-definition and stop
   needing the "may be provided by a package" hedge in diagnostics.
-- **Extract template refactor**: code action that moves the selected HTML
-  into a new `<template>`, replaces it with `{{> name}}` and optionally
-  stubs the code-behind.
 - **Data context inference** (full version): run the TypeScript checker
   against code-behind files to know helper return types and offer property
   completions inside `{{#each}}`/`{{#with}}` blocks. Consider building it

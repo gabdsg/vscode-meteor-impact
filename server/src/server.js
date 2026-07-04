@@ -124,7 +124,9 @@ class ServerInstance {
                     foldingRangeProvider: true,
                     linkedEditingRangeProvider: true,
                     renameProvider: { prepareProvider: true },
-                    codeActionProvider: { codeActionKinds: ["quickfix"] },
+                    codeActionProvider: {
+                        codeActionKinds: ["quickfix", "refactor.extract"],
+                    },
                     semanticTokensProvider: {
                         legend: SemanticTokensProvider.legend,
                         full: true,
