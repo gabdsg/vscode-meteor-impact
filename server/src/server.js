@@ -9,6 +9,7 @@ const { DefinitionProvider } = require("./definition-provider");
 const { CompletionProvider } = require("./completion-provider");
 const { ReferencesProvider } = require("./references-provider");
 const { HoverProvider } = require("./hover-provider");
+const { SymbolsProvider } = require("./symbols-provider");
 const { Indexer } = require("./indexer");
 
 class ServerInstance {
@@ -61,6 +62,12 @@ class ServerInstance {
                 this.rootUri,
                 this.indexer
             );
+            this.symbolsProvider = new SymbolsProvider(
+                this.connection,
+                this.documents,
+                this.rootUri,
+                this.indexer
+            );
 
             return {
                 capabilities: {
@@ -68,6 +75,8 @@ class ServerInstance {
                     definitionProvider: true,
                     referencesProvider: true,
                     hoverProvider: true,
+                    documentSymbolProvider: true,
+                    workspaceSymbolProvider: true,
                     completionProvider: {
                         resolveProvider: "true",
                         triggerCharacters: ["."],
@@ -93,6 +102,12 @@ class ServerInstance {
         );
         this.connection.onHover((...params) =>
             this.hoverProvider.onHoverRequest(...params)
+        );
+        this.connection.onDocumentSymbol((...params) =>
+            this.symbolsProvider.onDocumentSymbolRequest(...params)
+        );
+        this.connection.onWorkspaceSymbol((...params) =>
+            this.symbolsProvider.onWorkspaceSymbolRequest(...params)
         );
         this.connection.onDidChangeConfiguration((...params) =>
             this.indexer.onDidChangeConfiguration(...params)
