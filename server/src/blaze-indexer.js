@@ -108,10 +108,10 @@ class BlazeIndexer {
 
         if (callee.property.name !== TEMPLATE_CALLERS.HELPERS) return;
 
-        const templateNameProperty = callee.object.property;
-        if (templateNameProperty?.type !== NODE_TYPES.IDENTIFIER) return;
-
-        const templateName = templateNameProperty.name;
+        const templateName = this.getTemplateNameFromProperty(
+            callee.object.property
+        );
+        if (!templateName) return;
 
         const { arguments: nodeArguments } = node;
         if (!Array.isArray(nodeArguments) || !nodeArguments.length) return;
@@ -124,9 +124,14 @@ class BlazeIndexer {
                 if (prop.type !== NODE_TYPES.PROPERTY) return;
 
                 const { key, loc } = prop;
+                // Keys can be identifiers ({ helper() {} }) or string
+                // literals ({ "my-helper": () => {} }).
+                const helperName = key.name || key.value;
+                if (!helperName) continue;
+
                 this.addHelpersToMap({
                     templateName,
-                    helperName: key.name,
+                    helperName,
                     value: loc,
                     uri,
                 });
@@ -214,6 +219,25 @@ class BlazeIndexer {
                     ? loc.start.column + offset
                     : consumedLines[lineOffset].length,
         };
+    }
+
+    /**
+     * Extract the template name from the property of a Template.X or
+     * Template["x-y"] (computed string literal) member expression.
+     */
+    getTemplateNameFromProperty(property) {
+        const { NODE_TYPES } = require("./ast-helpers");
+
+        if (!property) return;
+
+        if (property.type === NODE_TYPES.IDENTIFIER) return property.name;
+
+        if (
+            property.type === NODE_TYPES.LITERAL &&
+            typeof property.value === "string"
+        ) {
+            return property.value;
+        }
     }
 
     getHelperName(helper) {
