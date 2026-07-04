@@ -1,3 +1,7 @@
+![Meteor Impact](images/banner.png)
+
+[![CI](https://github.com/gabdsg/vscode-meteor-toolbox/actions/workflows/ci.yml/badge.svg)](https://github.com/gabdsg/vscode-meteor-toolbox/actions/workflows/ci.yml)
+
 # Meteor Impact
 
 Full-impact language tooling for Meteor and Blaze. Meteor Impact turns VS Code
@@ -63,7 +67,11 @@ Works in `.js`, `.ts` and Spacebars `.html` files:
     and the template inclusion hierarchy - it follows the active editor,
     and has a search filter plus a current-file scope toggle.
 -   **Block auto-close**: typing `{{#if ...}}` (or pressing Enter after
-    it) inserts the matching `{{/if}}`.
+    it) inserts the matching `{{/if}}`; block regions fold.
+-   **Inlay hints**: helper call arguments show their parameter name
+    inline.
+-   **Instant warm starts**: the index is cached, so an unchanged project
+    skips re-parsing on startup; parse errors show as in-file squiggles.
 
 The index follows unsaved edits incrementally, so results stay fresh while
 you type.

@@ -6,6 +6,11 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [2.0.0] - 04/07/26
 
+-   Parse errors now appear as in-file error squiggles instead of a notification popup.
+-   Skip jsconfig.json generation when the workspace has a tsconfig.json.
+-   Rename templates from their own tag attribute; fold {{#block}} regions; parameter-name inlay hints in helper calls (LSP upgraded to 3.17).
+-   Status bar shows indexing progress and index stats; the index is cached for instant warm starts on unchanged projects.
+-   Add GitHub Actions CI (lint, coverage-gated unit tests, VS Code integration test, packaged .vsix artifact, tag-triggered marketplace + Open VSX publishing).
 -   Meteor Explorer: reveal the active file's template on editor switch, a current-file scope toggle, and a search filter (prunes both trees, keeping hierarchy paths that lead to matches).
 -   Add the Meteor Explorer activity bar panel: app-wide overview and template inclusion hierarchy, click-to-jump, unused markers.
 -   Resolve templates/global helpers provided by installed packages (scanned from the local build) in definitions, completion, hover and diagnostics; stop indexing .meteor/** as app sources.

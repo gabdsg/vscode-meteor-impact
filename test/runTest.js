@@ -12,8 +12,22 @@ async function main() {
 		// Passed to --extensionTestsPath
 		const extensionTestsPath = path.resolve(__dirname, './suite/index');
 
+		// A minimal Meteor workspace the extension activates in.
+		const testWorkspace = path.resolve(
+			__dirname,
+			'./integration-workspace'
+		);
+
 		// Download VS Code, unzip it and run the integration test
-		await runTests({ extensionDevelopmentPath, extensionTestsPath });
+		await runTests({
+			extensionDevelopmentPath,
+			extensionTestsPath,
+			launchArgs: [
+				testWorkspace,
+				'--disable-extensions',
+				'--disable-workspace-trust',
+			],
+		});
 	} catch (err) {
 		console.error('Failed to run tests');
 		process.exit(1);

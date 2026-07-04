@@ -9,7 +9,9 @@ function run() {
 		color: true
 	});
 
-	const testsRoot = path.resolve(__dirname, '..');
+	// Only the integration suite: the unit tests under test/server run
+	// with plain mocha (npm run test:server).
+	const testsRoot = __dirname;
 
 	return new Promise((c, e) => {
 		glob('**/**.test.js', { cwd: testsRoot }, (err, files) => {

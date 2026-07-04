@@ -33,6 +33,8 @@ Rounds A and B are implemented too:
 
 ### Round C - bigger bets
 
+- ~~Index persistence~~ (warm-start cache in the OS temp dir; unchanged
+  projects skip re-parsing, JS/TS sources hydrate lazily)
 - ~~Package awareness~~ (implemented via the local build bundles in
   `.meteor/local/build`: package templates/global helpers resolve in
   definitions, completion, hover and diagnostics, read-only)
@@ -40,3 +42,11 @@ Rounds A and B are implemented too:
   against code-behind files to know helper return types and offer property
   completions inside `{{#each}}`/`{{#with}}` blocks. Consider building it
   into `typescript-meteor-impact-plugin` instead of the language server.
+
+### Housekeeping done
+
+- CI (lint + coverage-gated tests + VS Code integration test + packaging,
+  tag-triggered publishing to Marketplace and Open VSX - set the VSCE_PAT
+  and OVSX_PAT repo secrets).
+- Remaining nice-to-have: record the demo GIFs listed in docs/DEMOS.md
+  for the marketplace page.
