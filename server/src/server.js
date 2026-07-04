@@ -14,6 +14,7 @@ const { DiagnosticsProvider } = require("./diagnostics-provider");
 const { HtmlFeaturesProvider } = require("./html-features-provider");
 const { RenameProvider } = require("./rename-provider");
 const { CodeActionsProvider } = require("./code-actions-provider");
+const { SemanticTokensProvider } = require("./semantic-tokens-provider");
 const { Indexer } = require("./indexer");
 
 class ServerInstance {
@@ -98,6 +99,12 @@ class ServerInstance {
                 this.rootUri,
                 this.indexer
             );
+            this.semanticTokensProvider = new SemanticTokensProvider(
+                this.connection,
+                this.documents,
+                this.rootUri,
+                this.indexer
+            );
 
             return {
                 capabilities: {
@@ -111,6 +118,11 @@ class ServerInstance {
                     linkedEditingRangeProvider: true,
                     renameProvider: { prepareProvider: true },
                     codeActionProvider: { codeActionKinds: ["quickfix"] },
+                    semanticTokensProvider: {
+                        legend: SemanticTokensProvider.legend,
+                        full: true,
+                        range: false,
+                    },
                     documentFormattingProvider: true,
                     documentRangeFormattingProvider: true,
                     completionProvider: {
@@ -156,6 +168,9 @@ class ServerInstance {
         );
         this.connection.onCodeAction((...params) =>
             this.codeActionsProvider.onCodeActionRequest(...params)
+        );
+        this.connection.languages.semanticTokens.on((...params) =>
+            this.semanticTokensProvider.onSemanticTokensRequest(...params)
         );
         this.connection.onPrepareRename((...params) =>
             this.renameProvider.onPrepareRenameRequest(...params)
