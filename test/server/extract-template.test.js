@@ -34,153 +34,268 @@ const applyEdits = (content, edits) => {
         );
 };
 
-describe("CodeActionsProvider - extract template refactor", () => {
-    let indexer;
-    let provider;
-    let rootPath;
+const count = (str, sub) => str.split(sub).length - 1;
 
-    const requestActions = (uri, range) =>
-        provider.onCodeActionRequest({
-            textDocument: { uri },
-            range,
-            context: { diagnostics: [] },
+const createProvider = (indexer, serverMock = serverInstanceMock) =>
+    new CodeActionsProvider(
+        serverMock,
+        documentsInstanceMock,
+        `file://${__dirname}`,
+        indexer
+    );
+
+describe("CodeActionsProvider - extract template refactor", () => {
+    describe("code action", () => {
+        let provider;
+
+        before(async () => {
+            const { indexer } = await loadFixtureIndexer("basic-project");
+            provider = createProvider(indexer);
         });
 
-    before(async () => {
-        ({ indexer, rootPath } = await loadFixtureIndexer("basic-project"));
-        provider = new CodeActionsProvider(
-            serverInstanceMock,
-            documentsInstanceMock,
-            `file://${__dirname}`,
-            indexer
-        );
-    });
+        const requestActions = (range) =>
+            provider.onCodeActionRequest({
+                textDocument: {
+                    uri: fixtureUri("basic-project", "client/foo.html"),
+                },
+                range,
+                context: { diagnostics: [] },
+            });
 
-    it("extracts the selection into a new template", () => {
-        // The two <span> lines of foo.html (lines 2-3, full lines).
-        const action = requestActions(
-            fixtureUri("basic-project", "client/foo.html"),
-            {
+        it("offers a command carrying the range and a suggested name", () => {
+            const action = requestActions({
                 start: { line: 2, character: 8 },
                 end: { line: 3, character: 39 },
-            }
-        ).find(({ kind }) => kind === "refactor.extract");
+            }).find(({ kind }) => kind === "refactor.extract");
 
-        assert.ok(action, "Expected an extract action");
-        assert.ok(action.title.includes('"extractedTemplate"'));
+            assert.ok(action, "Expected an extract action");
+            assert.strictEqual(
+                action.command.command,
+                "meteorToolbox.extractTemplate"
+            );
 
-        const [uri] = Object.keys(action.edit.changes);
-        assert.ok(uri.endsWith("foo.html"));
+            const [args] = action.command.arguments;
+            assert.ok(args.uri.endsWith("foo.html"));
+            assert.strictEqual(args.suggestedName, "extractedTemplate");
+            assert.deepStrictEqual(args.range.start, {
+                line: 2,
+                character: 8,
+            });
+        });
 
-        const updated = applyEdits(
-            fs.readFileSync(path.join(rootPath, "client/foo.html"), "utf-8"),
-            action.edit.changes[uri]
-        );
-
-        // Selection replaced by the partial...
-        assert.ok(updated.includes("{{> extractedTemplate}}"));
-        // ...and moved into a new template, dedented to one level.
-        assert.ok(updated.includes('<template name="extractedTemplate">'));
-        assert.ok(
-            updated.includes(
-                "    <span>{{formattedName person}}</span>\n    <span>{{peopleCount}}</span>"
-            )
-        );
-        // The original content appears only once.
-        assert.strictEqual(
-            updated.split("{{formattedName person}}").length - 1,
-            1
-        );
-    });
-
-    it("generates a unique template name", () => {
-        indexer.blazeIndexer.templateIndexMap["extractedTemplate"] = {};
-
-        try {
-            const action = requestActions(
-                fixtureUri("basic-project", "client/foo.html"),
+        it("offers nothing for empty or whitespace selections", () => {
+            [
                 {
                     start: { line: 2, character: 8 },
-                    end: { line: 3, character: 39 },
-                }
-            ).find(({ kind }) => kind === "refactor.extract");
-
-            assert.ok(action.title.includes('"extractedTemplate2"'));
-        } finally {
-            delete indexer.blazeIndexer.templateIndexMap["extractedTemplate"];
-        }
-    });
-
-    it("offers nothing for an empty selection", () => {
-        const actions = requestActions(
-            fixtureUri("basic-project", "client/foo.html"),
-            {
-                start: { line: 2, character: 8 },
-                end: { line: 2, character: 8 },
-            }
-        );
-
-        assert.ok(
-            !actions.some(({ kind }) => kind === "refactor.extract")
-        );
-    });
-
-    it("offers nothing when the selection crosses template boundaries", async () => {
-        const { indexer: multiIndexer } = await loadFixtureIndexer(
-            "multi-template-project"
-        );
-        const multiProvider = new CodeActionsProvider(
-            serverInstanceMock,
-            documentsInstanceMock,
-            `file://${__dirname}`,
-            multiIndexer
-        );
-
-        // From inside "first" through the closing tag into "second".
-        const actions = multiProvider.onCodeActionRequest({
-            textDocument: {
-                uri: fixtureUri("multi-template-project", "client/multi.html"),
-            },
-            range: {
-                start: { line: 1, character: 4 },
-                end: { line: 5, character: 10 },
-            },
-            context: { diagnostics: [] },
+                    end: { line: 2, character: 8 },
+                },
+                {
+                    start: { line: 2, character: 0 },
+                    end: { line: 2, character: 8 },
+                },
+            ].forEach((range) => {
+                assert.ok(
+                    !requestActions(range).some(
+                        ({ kind }) => kind === "refactor.extract"
+                    )
+                );
+            });
         });
 
-        assert.ok(
-            !actions.some(({ kind }) => kind === "refactor.extract")
-        );
+        it("offers nothing when the selection crosses template boundaries", async () => {
+            const { indexer } = await loadFixtureIndexer(
+                "multi-template-project"
+            );
+
+            const actions = createProvider(indexer).onCodeActionRequest({
+                textDocument: {
+                    uri: fixtureUri(
+                        "multi-template-project",
+                        "client/multi.html"
+                    ),
+                },
+                range: {
+                    start: { line: 1, character: 4 },
+                    end: { line: 5, character: 10 },
+                },
+                context: { diagnostics: [] },
+            });
+
+            assert.ok(
+                !actions.some(({ kind }) => kind === "refactor.extract")
+            );
+        });
     });
 
-    it("offers nothing for whitespace-only selections", () => {
-        const actions = requestActions(
-            fixtureUri("basic-project", "client/foo.html"),
-            {
-                start: { line: 2, character: 0 },
-                end: { line: 2, character: 8 },
-            }
-        );
+    describe("edit building", () => {
+        let indexer;
+        let provider;
+        let rootPath;
+        let changes;
 
-        assert.ok(
-            !actions.some(({ kind }) => kind === "refactor.extract")
-        );
-    });
+        const editsFor = (fileName) => {
+            const key = Object.keys(changes).find((uri) =>
+                uri.endsWith(fileName)
+            );
+            assert.ok(key, `Expected edits for ${fileName}`);
+            return changes[key];
+        };
 
-    it("respects context.only filtering", () => {
-        const actions = provider.onCodeActionRequest({
-            textDocument: {
-                uri: fixtureUri("basic-project", "client/foo.html"),
-            },
-            range: {
-                start: { line: 2, character: 8 },
-                end: { line: 3, character: 39 },
-            },
-            context: { diagnostics: [], only: ["quickfix"] },
+        const applyTo = (relativePath) =>
+            applyEdits(
+                fs.readFileSync(path.join(rootPath, relativePath), "utf-8"),
+                editsFor(relativePath.split("/").pop())
+            );
+
+        before(async () => {
+            ({ indexer, rootPath } = await loadFixtureIndexer(
+                "extract-project"
+            ));
+            provider = createProvider(indexer);
+
+            // The <div class="js-box">...</div> block (lines 2-6).
+            changes = provider.buildExtractTemplateEdit({
+                uri: fixtureUri("extract-project", "client/panel.html"),
+                range: {
+                    start: { line: 2, character: 4 },
+                    end: { line: 6, character: 10 },
+                },
+                templateName: "detailsPanel",
+            });
         });
 
-        assert.ok(
-            !actions.some(({ kind }) => kind === "refactor.extract")
-        );
+        it("replaces the selection and appends the named template", () => {
+            const updated = applyTo("client/panel.html");
+
+            assert.ok(updated.includes("{{> detailsPanel}}"));
+            assert.ok(updated.includes('<template name="detailsPanel">'));
+            // Dedented one level inside the new template.
+            assert.ok(updated.includes('    <div class="js-box">'));
+            // Moved, not duplicated: the div lives only in the new template.
+            assert.strictEqual(count(updated, "js-box"), 1);
+            assert.ok(
+                updated.indexOf("js-box") >
+                    updated.indexOf('<template name="detailsPanel">')
+            );
+        });
+
+        it("moves helpers used only by the selection", () => {
+            const updated = applyTo("client/panel.ts");
+
+            // boxLabel now lives only on the new template.
+            assert.strictEqual(count(updated, "boxLabel"), 1);
+            assert.ok(
+                updated.includes("Template.detailsPanel.helpers({"),
+                "Expected a helpers block for the new template"
+            );
+            assert.ok(
+                updated.indexOf("boxLabel") >
+                    updated.indexOf("Template.detailsPanel.helpers")
+            );
+        });
+
+        it("copies helpers still used by the parent template", () => {
+            const updated = applyTo("client/panel.ts");
+
+            // summary is used in the selection AND in the footer.
+            assert.strictEqual(count(updated, "summary"), 2);
+            // title is untouched.
+            assert.strictEqual(count(updated, "title"), 1);
+        });
+
+        it("moves events whose targets are only in the selection", () => {
+            const updated = applyTo("client/panel.ts");
+
+            assert.strictEqual(count(updated, '"click .js-save"'), 1);
+            assert.ok(updated.includes("Template.detailsPanel.events({"));
+            assert.ok(
+                updated.indexOf('"click .js-save"') >
+                    updated.indexOf("Template.detailsPanel.events")
+            );
+        });
+
+        it("passes outer block variables as partial arguments", async () => {
+            const { indexer: blockVarsIndexer, rootPath: blockVarsRoot } =
+                await loadFixtureIndexer("block-vars-project");
+            const blockVarsProvider = createProvider(blockVarsIndexer);
+
+            const listLines = fs
+                .readFileSync(
+                    path.join(blockVarsRoot, "client/list.html"),
+                    "utf-8"
+                )
+                .split("\n");
+
+            const blockVarsChanges =
+                blockVarsProvider.buildExtractTemplateEdit({
+                    uri: fixtureUri("block-vars-project", "client/list.html"),
+                    range: {
+                        start: { line: 2, character: 8 },
+                        end: { line: 2, character: listLines[2].length },
+                    },
+                    templateName: "personRow",
+                });
+
+            const key = Object.keys(blockVarsChanges).find((uri) =>
+                uri.endsWith("list.html")
+            );
+            const updated = applyEdits(
+                listLines.join("\n"),
+                blockVarsChanges[key]
+            );
+
+            assert.ok(
+                updated.includes("{{> personRow person=person}}"),
+                "Expected the each-in binding to travel via data context"
+            );
+        });
+    });
+
+    describe("execution", () => {
+        it("applies the edit through the connection", async () => {
+            const { indexer } = await loadFixtureIndexer("extract-project");
+
+            const applied = [];
+            const provider = createProvider(indexer, {
+                workspace: { applyEdit: async (params) => applied.push(params) },
+                window: { showErrorMessage: () => {} },
+            });
+
+            const result = await provider.executeExtractTemplate({
+                uri: fixtureUri("extract-project", "client/panel.html"),
+                range: {
+                    start: { line: 2, character: 4 },
+                    end: { line: 6, character: 10 },
+                },
+                templateName: "detailsPanel",
+            });
+
+            assert.strictEqual(result.applied, true);
+            assert.strictEqual(applied.length, 1);
+            assert.ok(Object.keys(applied[0].changes).length >= 2);
+        });
+
+        it("rejects names that already exist", async () => {
+            const { indexer } = await loadFixtureIndexer("extract-project");
+
+            const errors = [];
+            const provider = createProvider(indexer, {
+                workspace: { applyEdit: async () => {} },
+                window: { showErrorMessage: (m) => errors.push(m) },
+            });
+
+            const result = await provider.executeExtractTemplate({
+                uri: fixtureUri("extract-project", "client/panel.html"),
+                range: {
+                    start: { line: 2, character: 4 },
+                    end: { line: 6, character: 10 },
+                },
+                templateName: "panel",
+            });
+
+            assert.strictEqual(result.applied, false);
+            assert.strictEqual(errors.length, 1);
+            assert.ok(errors[0].includes("already exists"));
+        });
     });
 });

@@ -1,4 +1,37 @@
 let client;
+let extractTemplateCommandDisposable;
+
+/**
+ * The "Extract selection to template..." code action carries this command:
+ * ask for the template name (LSP has no input box), then let the server
+ * build and apply the workspace edit.
+ */
+const registerExtractTemplateCommand = () => {
+    const { commands, window } = require("vscode");
+
+    extractTemplateCommandDisposable?.dispose?.();
+    extractTemplateCommandDisposable = commands.registerCommand(
+        "meteorToolbox.extractTemplate",
+        async (args) => {
+            const templateName = await window.showInputBox({
+                prompt: "Name for the extracted template",
+                value: args?.suggestedName,
+                validateInput: (value) =>
+                    /^[\w-]+$/.test(value)
+                        ? undefined
+                        : "Template names can only contain letters, numbers, _ and -.",
+            });
+
+            if (!templateName) return;
+
+            await client.sendRequest("meteorToolbox/extractTemplate", {
+                ...args,
+                templateName,
+            });
+        }
+    );
+};
+
 const connectToLanguageServer = async (asAbsolutePath) => {
     const {
         TransportKind,
@@ -45,6 +78,7 @@ const connectToLanguageServer = async (asAbsolutePath) => {
     // Start the client. This will also launch the server
     await client.start();
     setupNotifications();
+    registerExtractTemplateCommand();
 
     return client;
 };
@@ -70,6 +104,9 @@ const setupNotifications = () => {
 };
 
 const stopServer = () => {
+    extractTemplateCommandDisposable?.dispose?.();
+    extractTemplateCommandDisposable = undefined;
+
     if (!client) return;
     client.stop();
 };

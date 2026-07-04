@@ -6,7 +6,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [04/07/26]
 
--   Add "Extract selection to template" refactoring: moves the selected HTML into a new template and replaces it with a partial; rename the generated name with F2.
+-   Add "Extract selection to template" refactoring: prompts for the template name, moves the selected HTML into a new template, replaces it with a partial (passing outer block variables as arguments), and moves or copies the helpers and events the selection uses.
 -   Add semantic highlighting for Spacebars: resolved helpers, templates, block keywords and block variables get distinct colors.
 -   Track `{{#each x in ...}}`/`{{#let}}` block variables: offered in completion, excluded from unresolved-helper diagnostics.
 -   Add signature help for `{{helper args}}` mustaches and `Meteor.call`/`callAsync`/`subscribe` argument lists, preserving TypeScript parameter annotations.

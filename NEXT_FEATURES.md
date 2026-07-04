@@ -26,7 +26,8 @@ Rounds A and B are implemented too:
 - ~~Signature help~~ (`{{helper |}}` and `Meteor.call("x", |)`, with TS
   parameter annotations preserved)
 - ~~Extract template refactor~~ (selection -> new `<template>` + `{{> partial}}`;
-  rename the generated placeholder name with F2)
+  prompts for the name, moves/copies the helpers and events the selection
+  uses, and passes outer block variables as partial arguments)
 
 ## Ideas for future rounds
 

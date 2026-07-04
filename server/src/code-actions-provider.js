@@ -124,11 +124,36 @@ class CodeActionsProvider extends ServerBase {
 
     /**
      * "Extract to template": replace the selected HTML with a
-     * {{> partial}} and append a new <template> containing it. The
-     * generated name is a placeholder - a single rename (F2) on it updates
-     * the partial and the tag together.
+     * {{> partial}} and move it into a new <template>, together with the
+     * helpers/events it uses. The action carries a command: the client
+     * asks for the template name and then requests the actual edit via
+     * meteorToolbox/extractTemplate (see executeExtractTemplate).
      */
     createExtractTemplateAction({ uri, range }) {
+        const context = this.getExtractTemplateContext({ uri, range });
+        if (!context) return;
+
+        const title = "Extract selection to template...";
+
+        return {
+            title,
+            kind: "refactor.extract",
+            command: {
+                title,
+                command: "meteorToolbox.extractTemplate",
+                arguments: [
+                    {
+                        uri: context.parsedUri.toString(),
+                        range,
+                        suggestedName: this.generateExtractedTemplateName(),
+                    },
+                ],
+            },
+        };
+    }
+
+    // Validate the selection and gather what every extract step needs.
+    getExtractTemplateContext({ uri, range }) {
         if (!range || !this.isFileSpacebarsHTML(uri)) return;
 
         const { positionToOffset } = require("./text-utils");
@@ -146,37 +171,25 @@ class CodeActionsProvider extends ServerBase {
         if (/<\/?template\b/i.test(selectedText)) return;
 
         // The whole selection must live inside a single template body.
-        if (!this.isInsideOneTemplateBody(content, startOffset, endOffset)) {
-            return;
-        }
-
-        const templateName = this.generateExtractedTemplateName();
-
-        const { TextEdit } = require("vscode-languageserver");
-        const stub = `${
-            content.endsWith("\n") ? "" : "\n"
-        }\n<template name="${templateName}">\n${this.reindentExtractedBody(
-            selectedText
-        )}\n</template>\n`;
+        const region = this.findWrappingTemplateRegion(
+            content,
+            startOffset,
+            endOffset
+        );
+        if (!region) return;
 
         return {
-            title: `Extract selection to template "${templateName}"`,
-            kind: "refactor.extract",
-            edit: {
-                changes: {
-                    [parsedUri.toString()]: [
-                        TextEdit.replace(range, `{{> ${templateName}}}`),
-                        TextEdit.insert(
-                            this.endOfFilePosition(content),
-                            stub
-                        ),
-                    ],
-                },
-            },
+            parsedUri,
+            content,
+            range,
+            startOffset,
+            endOffset,
+            selectedText,
+            region,
         };
     }
 
-    isInsideOneTemplateBody(content, startOffset, endOffset) {
+    findWrappingTemplateRegion(content, startOffset, endOffset) {
         const { getTemplateTags } = require("./text-utils");
 
         const tags = getTemplateTags(content);
@@ -189,11 +202,251 @@ class CodeActionsProvider extends ServerBase {
             if (!closing) continue;
 
             if (startOffset >= tags[i].end && endOffset <= closing.start) {
-                return true;
+                return {
+                    templateName: tags[i].name,
+                    bodyStart: tags[i].end,
+                    bodyEnd: closing.start,
+                };
             }
         }
 
-        return false;
+        return;
+    }
+
+    async executeExtractTemplate({ uri, range, templateName }) {
+        const fail = (message) => {
+            this.serverInstance.window?.showErrorMessage?.(message);
+            return { applied: false, reason: message };
+        };
+
+        try {
+            if (!templateName || !/^[\w-]+$/.test(templateName)) {
+                return fail(
+                    `"${templateName}" is not a valid template name.`
+                );
+            }
+
+            if (this.indexer.blazeIndexer.templateIndexMap[templateName]) {
+                return fail(
+                    `A template named "${templateName}" already exists.`
+                );
+            }
+
+            const changes = this.buildExtractTemplateEdit({
+                uri,
+                range,
+                templateName,
+            });
+            if (!changes) {
+                return fail("The selection can't be extracted.");
+            }
+
+            await this.serverInstance.workspace.applyEdit({ changes });
+            return { applied: true };
+        } catch (e) {
+            console.error(`Extract template failed. ${e}`);
+            return fail(`Extract template failed: ${e.message}`);
+        }
+    }
+
+    buildExtractTemplateEdit({ uri, range, templateName }) {
+        const context = this.getExtractTemplateContext({ uri, range });
+        if (!context) return;
+
+        const { TextEdit } = require("vscode-languageserver");
+        const { parsedUri, content, selectedText } = context;
+
+        const changes = {};
+        const addEdit = (uriString, edit) => {
+            changes[uriString] = changes[uriString] || [];
+            changes[uriString].push(edit);
+        };
+
+        // Blaze partials inherit the parent data context but not block
+        // bindings: pass the outer block variables the selection uses as
+        // keyword arguments, so they arrive through the data context.
+        const partialArguments = this.getFreeBlockVariables(context)
+            .map((name) => ` ${name}=${name}`)
+            .join("");
+
+        const stub = `${
+            content.endsWith("\n") ? "" : "\n"
+        }\n<template name="${templateName}">\n${this.reindentExtractedBody(
+            selectedText
+        )}\n</template>\n`;
+
+        addEdit(
+            parsedUri.toString(),
+            TextEdit.replace(range, `{{> ${templateName}${partialArguments}}}`)
+        );
+        addEdit(
+            parsedUri.toString(),
+            TextEdit.insert(this.endOfFilePosition(content), stub)
+        );
+
+        this.addCodeBehindExtractEdits({ context, templateName, addEdit });
+
+        return changes;
+    }
+
+    getFreeBlockVariables({ content, startOffset, selectedText }) {
+        const { getBlockVariablesAtOffset } = require("./text-utils");
+
+        return getBlockVariablesAtOffset(content, startOffset)
+            .map(({ name }) => name)
+            .filter((name, index, names) => names.indexOf(name) === index)
+            .filter((name) =>
+                new RegExp(`\\{\\{[^{}]*\\b${name}\\b`).test(selectedText)
+            );
+    }
+
+    /**
+     * Move the helpers and events the selection uses to the new template's
+     * code-behind. Entries still used by the rest of the parent template
+     * are copied instead of moved; moves whose property doesn't cleanly
+     * own its lines are downgraded to copies.
+     */
+    addCodeBehindExtractEdits({ context, templateName, addEdit }) {
+        const { positionToOffset } = require("./text-utils");
+        const { parsedUri, content, startOffset, endOffset, region } = context;
+
+        const { blazeIndexer } = this.indexer;
+        const parent = blazeIndexer.templateIndexMap[region.templateName];
+        if (!parent) return;
+
+        const offsetOf = ({ line, column }) =>
+            positionToOffset(content, { line: line - 1, character: column });
+        const isSelected = (offset) =>
+            offset >= startOffset && offset < endOffset;
+
+        // Helpers: decide by where their usages live.
+        const helpersToExtract = [];
+        for (const [name, entry] of Object.entries(parent.helpers || {})) {
+            if (!entry.uri) continue;
+
+            const usageOffsets = (blazeIndexer.htmlUsageMap[name] || [])
+                .filter(({ uri }) => uri.fsPath === parsedUri.fsPath)
+                .map(({ node }) => offsetOf(node.loc.start))
+                .filter(
+                    (offset) =>
+                        offset >= region.bodyStart && offset < region.bodyEnd
+                );
+
+            const selectedUsages = usageOffsets.filter(isSelected);
+            if (!selectedUsages.length) continue;
+
+            helpersToExtract.push({
+                entry,
+                move: selectedUsages.length === usageOffsets.length,
+            });
+        }
+
+        // Events: decide by where the elements their selectors target live.
+        const eventsToExtract = [];
+        for (const [eventKey, entry] of Object.entries(parent.events || {})) {
+            if (!entry.uri) continue;
+
+            const selectors = eventKey.match(/[.#][\w-]+/g) || [];
+            const elementOffsets = selectors
+                .flatMap(
+                    (selector) =>
+                        blazeIndexer.templateSelectorsMap[
+                            region.templateName
+                        ]?.[selector] || []
+                )
+                .filter(({ uri }) => uri.fsPath === parsedUri.fsPath)
+                .map(({ start }) => offsetOf(start));
+
+            const selectedElements = elementOffsets.filter(isSelected);
+            if (!selectedElements.length) continue;
+
+            eventsToExtract.push({
+                entry,
+                move: selectedElements.length === elementOffsets.length,
+            });
+        }
+
+        if (!helpersToExtract.length && !eventsToExtract.length) return;
+
+        // Group by defining file: helpers/events can be split across files.
+        const byFile = new Map();
+        const addToGroup = (kind, item) => {
+            const fsPath = item.entry.uri.fsPath;
+            if (!byFile.has(fsPath)) {
+                byFile.set(fsPath, {
+                    uri: item.entry.uri,
+                    helpers: [],
+                    events: [],
+                });
+            }
+            byFile.get(fsPath)[kind].push(item);
+        };
+        helpersToExtract.forEach((item) => addToGroup("helpers", item));
+        eventsToExtract.forEach((item) => addToGroup("events", item));
+
+        const { TextEdit, Range } = require("vscode-languageserver");
+        const templateAccess = IDENTIFIER_REGEX.test(templateName)
+            ? `Template.${templateName}`
+            : `Template["${templateName}"]`;
+
+        for (const [fsPath, group] of byFile) {
+            const jsContent = this.indexer.getSources()[fsPath]?.fileContent;
+            if (!jsContent) continue;
+
+            const uriString = group.uri.toString();
+            const jsLines = jsContent.split("\n");
+
+            const sliceProperty = ({ start, end }) =>
+                jsContent.slice(
+                    positionToOffset(jsContent, {
+                        line: start.line - 1,
+                        character: start.column,
+                    }),
+                    positionToOffset(jsContent, {
+                        line: end.line - 1,
+                        character: end.column,
+                    })
+                );
+
+            const deletePropertyLines = ({ start, end }) => {
+                const firstLine = jsLines[start.line - 1] || "";
+                const lastLine = jsLines[end.line - 1] || "";
+                const isSafe =
+                    !firstLine.slice(0, start.column).trim() &&
+                    /^,?\s*$/.test(lastLine.slice(end.column));
+                if (!isSafe) return false;
+
+                addEdit(
+                    uriString,
+                    TextEdit.del(
+                        Range.create(start.line - 1, 0, end.line, 0)
+                    )
+                );
+                return true;
+            };
+
+            for (const item of [...group.helpers, ...group.events]) {
+                if (item.move) deletePropertyLines(item.entry);
+            }
+
+            const buildBlock = (kind, items) =>
+                items.length
+                    ? `\n${templateAccess}.${kind}({\n${items
+                          .map(({ entry }) => `    ${sliceProperty(entry)},`)
+                          .join("\n")}\n});\n`
+                    : "";
+
+            addEdit(
+                uriString,
+                TextEdit.insert(
+                    this.endOfFilePosition(jsContent),
+                    `${jsContent.endsWith("\n") ? "" : "\n"}${buildBlock(
+                        "helpers",
+                        group.helpers
+                    )}${buildBlock("events", group.events)}`
+                )
+            );
+        }
     }
 
     generateExtractedTemplateName() {
