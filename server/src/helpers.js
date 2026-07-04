@@ -2,6 +2,7 @@ class ServerBase {
     static SPACEBARS_FILES_EXTENSION = {
         HTML_TEMPLATE: ".html",
         JS_TEMPLATE: ".js",
+        TS_TEMPLATE: ".ts",
     };
 
     constructor(serverInstance, documentsInstance, rootUri, indexer) {
@@ -39,11 +40,30 @@ class ServerBase {
     }
 
     isFileJS = (uri) => {
-        return (
-            this.getFileExtension(uri) ===
-            ServerBase.SPACEBARS_FILES_EXTENSION.JS_TEMPLATE
-        );
+        return [
+            ServerBase.SPACEBARS_FILES_EXTENSION.JS_TEMPLATE,
+            ServerBase.SPACEBARS_FILES_EXTENSION.TS_TEMPLATE,
+        ].includes(this.getFileExtension(uri));
     };
+
+    /**
+     * Given an HTML file uri, return the uri of the sibling .js or .ts file
+     * (i.e the template's code-behind file), preferring the one that exists
+     * on disk. Defaults to the .js path when neither exists.
+     */
+    getSiblingJsUri(uri) {
+        const { existsSync } = require("fs");
+
+        const htmlPath = this.parseUri(uri).fsPath;
+        const candidates = [
+            ServerBase.SPACEBARS_FILES_EXTENSION.JS_TEMPLATE,
+            ServerBase.SPACEBARS_FILES_EXTENSION.TS_TEMPLATE,
+        ].map((ext) => htmlPath.replace(/\.html$/, ext));
+
+        return this.parseUri(
+            candidates.find((path) => existsSync(path)) || candidates[0]
+        );
+    }
 
     getFileContent(_uri, range) {
         if (!this.serverInstance) {

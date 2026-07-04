@@ -121,18 +121,38 @@ const NODE_NAMES = {
     TEMPLATE: "Template",
 };
 
-const DEFAULT_ACORN_OPTIONS = {
-    allowImportExportEverywhere: true,
-    ecmaVersion: 2020,
-    sourceType: "module",
-    allowHashBang: true,
-    locations: true,
+/**
+ * Parse JS/TS source with @babel/parser. The "estree" plugin keeps the AST
+ * shape compatible with the previous acorn-based parsing (i.e "Property" and
+ * "Literal" node types), so the existing walkers work unchanged.
+ * With errorRecovery, files with recoverable syntax errors still produce an
+ * AST instead of dropping out of the index.
+ */
+const parseJsSource = (
+    textContent,
+    { extension = ".js", errorRecovery = true } = {}
+) => {
+    const { FILE_EXTENSIONS } = require("./constants");
+    const isTypescript = extension === FILE_EXTENSIONS.TS;
+
+    return require("@babel/parser").parse(textContent, {
+        sourceType: "unambiguous",
+        allowImportExportEverywhere: true,
+        allowReturnOutsideFunction: true,
+        allowAwaitOutsideFunction: true,
+        errorRecovery,
+        plugins: [
+            "estree",
+            "decorators-legacy",
+            isTypescript ? "typescript" : "jsx",
+        ],
+    });
 };
 
 module.exports = {
     createPositionObject,
     AstWalker,
     NODE_TYPES,
-    DEFAULT_ACORN_OPTIONS,
+    parseJsSource,
     NODE_NAMES,
 };

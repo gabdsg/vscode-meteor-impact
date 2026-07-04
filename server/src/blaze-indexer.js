@@ -20,7 +20,13 @@ class BlazeIndexer {
         this.templateIndexMap[templateName]["helpers"] =
             this.templateIndexMap[templateName]["helpers"] || {};
 
-        this.templateIndexMap[templateName]["helpers"][helperName] = value;
+        // Keep the uri around so that providers can point to the correct
+        // file (.js or .ts) where the helper is defined.
+        this.templateIndexMap[templateName]["helpers"][helperName] = {
+            start: value.start,
+            end: value.end,
+            uri,
+        };
     }
 
     addUsage({ node, uri, key }) {

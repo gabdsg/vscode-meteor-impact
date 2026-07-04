@@ -46,6 +46,7 @@ class Indexer extends ServerBase {
                     ignore: [
                         "tests/**",
                         "**/**.tests.js",
+                        "**/**.tests.ts",
                         "node_modules/**",
                         ...directoriesToBeIgnored,
                     ],
@@ -98,10 +99,9 @@ class Indexer extends ServerBase {
     async loadSources(globs = ["**/**{.js,.ts,.html}"]) {
         const uris = await this.findUris(globs);
 
-        const { AstWalker, DEFAULT_ACORN_OPTIONS } = require("./ast-helpers");
+        const { AstWalker, parseJsSource } = require("./ast-helpers");
         const { SpacebarsCompiler } = require("@blastjs/spacebars-compiler");
 
-        const { parse: acornParser } = require("acorn");
         const { parse: handlebarsParser } = require("@handlebars/parser");
 
         const parsingErrors = [];
@@ -115,8 +115,8 @@ class Indexer extends ServerBase {
 
                     const astWalker = new AstWalker(
                         fileContent,
-                        isFileHtml ? handlebarsParser : acornParser,
-                        isFileHtml ? {} : DEFAULT_ACORN_OPTIONS
+                        isFileHtml ? handlebarsParser : parseJsSource,
+                        isFileHtml ? {} : { extension }
                     );
 
                     // Also index the htmlJs representation.

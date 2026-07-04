@@ -22,16 +22,23 @@ class CompletionProvider extends ServerBase {
         // Parse the file, since the index may be outdated already.
         const {
             AstWalker,
-            DEFAULT_ACORN_OPTIONS,
+            parseJsSource,
             NODE_NAMES,
             NODE_TYPES,
         } = require("./ast-helpers");
-        // Parse with accorn-loose because the input can be syntatically wrong.
-        const astWalker = new AstWalker(
-            this.getFileContent(uri),
-            require("acorn-loose").parse,
-            DEFAULT_ACORN_OPTIONS
-        );
+
+        // Parse with errorRecovery because the input can be syntatically wrong.
+        let astWalker;
+        try {
+            astWalker = new AstWalker(this.getFileContent(uri), parseJsSource, {
+                extension: this.getFileExtension(uri),
+                errorRecovery: true,
+            });
+        } catch (e) {
+            // The content can be broken beyond recovery while typing.
+            console.warn(`Not able to parse ${uri} for completion. ${e}`);
+            return;
+        }
 
         const { line, character } = position;
         const nodeAtPosition = astWalker.getSymbolAtPosition({

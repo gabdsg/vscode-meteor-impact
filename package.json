@@ -142,6 +142,7 @@
         "lint": "eslint .",
         "pretest": "npm run lint",
         "test": "node ./test/runTest.js",
+        "test:server": "mocha \"test/server/**/*.test.js\"",
         "postinstall": "cd server && npm install && cd ../.."
     },
     "devDependencies": {

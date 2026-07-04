@@ -163,13 +163,11 @@ class DefinitionProvider extends ServerBase {
      */
     findTemplateDefinitionOnFile({ fileUri, symbol, htmlWalker }) {
         // Can be string or URI object.
-        const _uri = this.parseUri(
-            (fileUri.fsPath || fileUri).replace(".html", ".js")
-        );
+        const _uri = this.getSiblingJsUri(fileUri);
 
         const { existsSync } = require("fs");
         if (!existsSync(_uri.fsPath)) {
-            console.warn("Expected JS to have same name as HTML file");
+            console.warn("Expected JS/TS to have same name as HTML file");
             return;
         }
 
@@ -278,7 +276,7 @@ class DefinitionProvider extends ServerBase {
 
         // TODO -> Handle stateless templates defined just on HTML.
         return Location.create(
-            this.parseUri(templateUri).fsPath.replace(".html", ".js"),
+            this.getSiblingJsUri(templateUri).fsPath,
             Range.create(0, 0, 0, 0)
         );
     }
@@ -370,7 +368,7 @@ class DefinitionProvider extends ServerBase {
             helper: symbol,
         });
 
-        const { start, end } = helper || {};
+        const { start, end, uri: helperUri } = helper || {};
         if (!start || !end) {
             console.warn(
                 `Didn't found helper for symbol ${JSON.stringify(
@@ -384,9 +382,8 @@ class DefinitionProvider extends ServerBase {
 
         const { Location, Range } = require("vscode-languageserver");
 
-        // TODO -> Should we check if the JS file exists?
         return Location.create(
-            this.parseUri(uri).fsPath.replace(".html", ".js"),
+            helperUri?.fsPath || this.getSiblingJsUri(uri).fsPath,
             Range.create(start.line - 1, start.column, end.line - 1, end.column)
         );
     }
