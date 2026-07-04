@@ -18,7 +18,50 @@ class CompletionProvider extends ServerBase {
         return;
     }
 
+    // Regexes matching an open string literal that is the first argument of
+    // a method call / subscription, e.g `Meteor.callAsync("tasks.`.
+    static METHOD_CALL_REGEX =
+        /Meteor\s*\.\s*(?:callAsync|call|applyAsync|apply)\s*\(\s*["'`][^"'`]*$/;
+    static SUBSCRIBE_REGEX = /\.\s*subscribe\s*\(\s*["'`][^"'`]*$/;
+
+    getMethodOrPublicationCompletions({ uri, position }) {
+        const content = this.getFileContent(uri);
+        const linePrefix = (content.split("\n")[position.line] || "").slice(
+            0,
+            position.character
+        );
+
+        const isMethodCall =
+            CompletionProvider.METHOD_CALL_REGEX.test(linePrefix);
+        const isSubscription =
+            !isMethodCall && CompletionProvider.SUBSCRIBE_REGEX.test(linePrefix);
+
+        if (!isMethodCall && !isSubscription) return;
+
+        const {
+            CompletionItem,
+            CompletionItemKind,
+        } = require("vscode-languageserver");
+
+        const { methodsMap, publicationsMap } =
+            this.indexer.methodsAndPublicationsIndexer;
+
+        return Object.keys(isMethodCall ? methodsMap : publicationsMap).map(
+            (name) => ({
+                ...CompletionItem.create(name),
+                kind: CompletionItemKind.Method,
+                detail: isMethodCall ? "Meteor method" : "Meteor publication",
+            })
+        );
+    }
+
     handleJsCompletion({ uri, position }) {
+        // Completing a method/publication name string?
+        const methodOrPublicationItems = this.getMethodOrPublicationCompletions(
+            { uri, position }
+        );
+        if (methodOrPublicationItems) return methodOrPublicationItems;
+
         // Parse the file, since the index may be outdated already.
         const {
             AstWalker,
