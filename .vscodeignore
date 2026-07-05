@@ -7,6 +7,8 @@ test/**
 .prettierrc
 vsc-extension-quickstart.md
 NEXT_FEATURES.md
+RELEASING.md
+docs/**
 images/demo/**
 **/jsconfig.json
 **/*.map

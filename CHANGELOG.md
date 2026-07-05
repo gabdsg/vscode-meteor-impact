@@ -4,49 +4,129 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [2.0.0] - 04/07/26
+## [2.0.0] - 2026-07-05
 
--   Parse errors now appear as in-file error squiggles instead of a notification popup.
--   Skip jsconfig.json generation when the workspace has a tsconfig.json.
--   Rename templates from their own tag attribute; fold {{#block}} regions; parameter-name inlay hints in helper calls (LSP upgraded to 3.17).
--   Status bar shows indexing progress and index stats; the index is cached for instant warm starts on unchanged projects.
--   Add GitHub Actions CI (lint, coverage-gated unit tests, VS Code integration test, packaged .vsix artifact, tag-triggered marketplace + Open VSX publishing).
--   Meteor Explorer: reveal the active file's template on editor switch, a current-file scope toggle, and a search filter (prunes both trees, keeping hierarchy paths that lead to matches).
--   Add the Meteor Explorer activity bar panel: app-wide overview and template inclusion hierarchy, click-to-jump, unused markers.
--   Resolve templates/global helpers provided by installed packages (scanned from the local build) in definitions, completion, hover and diagnostics; stop indexing .meteor/** as app sources.
--   Auto-close Blaze block tags ({{#if ...}} inserts {{/if}}).
--   Flag calls to unknown methods/publications with create-stub quick fixes, and hint unused ones.
--   Add "Go to Template Counterpart" (Alt+O) cycling html -> code-behind -> style.
--   Add "Rename Blaze Template" renaming the folder, files, imports and all usages together.
--   Add explorer file nesting for template files, Blaze/Meteor snippets (Surround With support), .meteor/packages hover/completion, and "Generate Meteor.settings Types".
--   Rename the extension to **Meteor Impact** (`gabdsg.meteor-impact`), forked from Meteor Toolbox. BREAKING: all identifiers changed - commands are now `meteorImpact.*` and the settings key is `conf.settingsEditor.meteorImpact` (update your settings.json/keybindings), the diagnostics source is `meteor-impact` and the TS server plugin is `typescript-meteor-impact-plugin`.
--   Add a "Create Blaze Template" explorer context menu: scaffolds a folder with the template HTML, a .js or .ts code-behind (asked via prompt, importing the HTML/style and stubbing onCreated/helpers/events) and optionally a .less/.css file (less when the meteor less package is installed).
--   Add "Extract selection to template" refactoring: prompts for the template name, moves the selected HTML into a new template, replaces it with a partial (passing outer block variables as arguments), and moves or copies the helpers and events the selection uses.
--   Add semantic highlighting for Spacebars: resolved helpers, templates, block keywords and block variables get distinct colors.
--   Track `{{#each x in ...}}`/`{{#let}}` block variables: offered in completion, excluded from unresolved-helper diagnostics.
--   Add signature help for `{{helper args}}` mustaches and `Meteor.call`/`callAsync`/`subscribe` argument lists, preserving TypeScript parameter annotations.
--   Add linked editing of paired HTML tags in Spacebars files.
--   Add quick fixes for diagnostics: create missing template/helper stubs, remove unused helpers.
--   Connect event maps with template HTML: go-to-definition from event keys to targeted elements, find handlers from class/id tokens, and selector completion inside event keys.
--   Make project indexing deterministic regardless of file read order.
--   Embed the HTML language service: HTML completion, hover, folding ranges and Emmet now work in Spacebars files alongside the Blaze features.
--   Add rename refactoring for helpers, templates, methods/publications and event keys, updating definitions and usages together. Helper renames are scope-aware: only the resolved template scope (or the global helper, excluding shadowed usages) is renamed.
--   Reindex changed files incrementally (following unsaved edits) instead of reindexing the whole project on every change.
--   Add document and range formatting for Spacebars files, with mustache block indentation.
--   Fix method/publication usages not being indexed when the defining file sorted after the using file.
--   Offer context-aware completions in Spacebars templates: helpers of the wrapping template and global helpers inside `{{...}}`, template names after `{{>`.
--   Complete method and publication names inside `Meteor.call`/`callAsync`/`subscribe` string arguments.
--   Support find-references from HTML files (mustaches and partials), including definitions.
--   Add hover cards for helpers, templates, methods, publications and event keys.
--   Add outline/breadcrumbs (document symbols) and workspace symbol search for templates, helpers, events, methods and publications.
--   Publish project diagnostics: unresolved partials, unresolved helper calls with arguments, duplicate template names and unused helpers.
+First release as **Meteor Impact** (`gabdsg.meteor-impact`), forked from
+[Meteor Toolbox](https://github.com/matheusccastroo/vscode-meteor-toolbox).
+
+**BREAKING**: all identifiers changed - commands are now `meteorImpact.*`
+and the settings key is `conf.settingsEditor.meteorImpact` (update your
+settings.json/keybindings), the diagnostics source is `meteor-impact` and
+the TS server plugin is `typescript-meteor-impact-plugin`.
+
+### TypeScript support
+
+-   Add TypeScript support to the language server indexer: `.js` and `.ts`
+    files are now parsed with `@babel/parser` (estree-compatible AST), so
+    `.ts` files no longer drop out of the index, and definition/references/
+    completion also work from `.ts` files.
 -   Register TypeScript documents with the language client.
--   Add TypeScript support to the language server indexer: `.js` and `.ts` files are now parsed with `@babel/parser` (estree-compatible AST), so `.ts` files no longer drop out of the index, and definition/references/completion also work from `.ts` files.
--   Index `Template.registerHelper` calls as global helpers, with definition fallback when a mustache doesn't match a template-scoped helper.
--   Index every `<template>` tag of an HTML content chunk with its precise location (previously only the first one per chunk was indexed).
--   Support `Template["kebab-name"]` computed member access and string literal helper keys when indexing helpers.
--   Index `Template.X.events` maps and support find-references on event handler keys.
+-   Signature help preserves TypeScript parameter annotations.
+
+### Indexing
+
+-   Index `Template.registerHelper` calls as global helpers, with
+    definition fallback when a mustache doesn't match a template-scoped
+    helper.
+-   Index every `<template>` tag of an HTML content chunk with its precise
+    location (previously only the first one per chunk was indexed).
+-   Support `Template["kebab-name"]` computed member access and string
+    literal helper keys when indexing helpers.
+-   Index `Template.X.events` maps and support find-references on event
+    handler keys.
+-   Reindex changed files incrementally (following unsaved edits) instead
+    of reindexing the whole project on every change.
+-   Cache the index for instant warm starts on unchanged projects.
+-   Make project indexing deterministic regardless of file read order.
+-   Resolve templates/global helpers provided by installed packages
+    (scanned from the local build) in definitions, completion, hover and
+    diagnostics; stop indexing `.meteor/**` as app sources.
+
+### Language features
+
+-   Context-aware completions in Spacebars templates: helpers of the
+    wrapping template and global helpers inside `{{...}}`, template names
+    after `{{>`, block variables, and method/publication names inside
+    `Meteor.call`/`callAsync`/`subscribe` string arguments.
+-   Find-references from HTML files (mustaches and partials), including
+    definitions.
+-   Hover cards for helpers, templates, methods, publications and event
+    keys.
+-   Outline/breadcrumbs (document symbols) and workspace symbol search for
+    templates, helpers, events, methods and publications.
+-   Rename refactoring for helpers, templates, methods/publications and
+    event keys, updating definitions and usages together. Helper renames
+    are scope-aware: only the resolved template scope (or the global
+    helper, excluding shadowed usages) is renamed. Templates can also be
+    renamed from their own tag attribute.
+-   Signature help for `{{helper args}}` mustaches and
+    `Meteor.call`/`callAsync`/`subscribe` argument lists.
+-   Parameter-name inlay hints in helper calls (LSP upgraded to 3.17).
+-   Semantic highlighting for Spacebars: resolved helpers, templates,
+    block keywords and block variables get distinct colors.
+-   Track `{{#each x in ...}}`/`{{#let}}` block variables: offered in
+    completion, excluded from unresolved-helper diagnostics.
+-   Connect event maps with template HTML: go-to-definition from event
+    keys to targeted elements, find handlers from class/id tokens, and
+    selector completion inside event keys.
+-   Embed the HTML language service: HTML completion, hover, folding
+    ranges and Emmet now work in Spacebars files alongside the Blaze
+    features.
+-   Linked editing of paired HTML tags and folding of `{{#block}}` regions
+    in Spacebars files.
+-   Document and range formatting for Spacebars files, with mustache block
+    indentation.
+-   Auto-close Blaze block tags (`{{#if ...}}` inserts `{{/if}}`).
+
+### Diagnostics and quick fixes
+
+-   Publish project diagnostics: unresolved partials, unresolved helper
+    calls with arguments, duplicate template names and unused helpers.
+-   Flag calls to unknown methods/publications with create-stub quick
+    fixes, and hint unused ones.
+-   Quick fixes: create missing template/helper stubs, remove unused
+    helpers.
+-   Parse errors appear as in-file error squiggles instead of a
+    notification popup.
+
+### Refactoring
+
+-   "Extract selection to template": prompts for the template name, moves
+    the selected HTML into a new template, replaces it with a partial
+    (passing outer block variables as arguments), and moves or copies the
+    helpers and events the selection uses.
+
+### Workflow tooling
+
+-   "Create Blaze Template" explorer context menu: scaffolds a folder with
+    the template HTML, a .js or .ts code-behind (asked via prompt,
+    importing the HTML/style and stubbing onCreated/helpers/events) and
+    optionally a .less/.css file (less when the meteor less package is
+    installed).
+-   "Rename Blaze Template": renames the folder, files, imports and all
+    usages together.
+-   "Go to Template Counterpart" (Alt+O) cycling html -> code-behind ->
+    style.
+-   Explorer file nesting for template files, Blaze/Meteor snippets
+    (Surround With support), `.meteor/packages` hover/completion, and
+    "Generate Meteor.settings Types".
+-   Meteor Explorer activity bar panel: app-wide overview and template
+    inclusion hierarchy with click-to-jump and unused markers; reveals the
+    active file's template on editor switch, and has a current-file scope
+    toggle and a search filter (prunes both trees, keeping hierarchy paths
+    that lead to matches).
+-   Status bar shows indexing progress and index stats.
+-   Skip `jsconfig.json` generation when the workspace has a
+    `tsconfig.json`.
+
+### Fixes and infrastructure
+
+-   Fix method/publication usages not being indexed when the defining file
+    sorted after the using file.
 -   Fix crash when resolving helpers of a template that has none indexed.
+-   Add GitHub Actions CI (lint, coverage-gated unit tests, VS Code
+    integration test, packaged .vsix artifact, tag-triggered marketplace +
+    Open VSX publishing).
 
 ## [07/01/23]
 
