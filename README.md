@@ -1,6 +1,6 @@
 ![Meteor Impact](images/banner.png)
 
-[![CI](https://github.com/gabdsg/vscode-meteor-toolbox/actions/workflows/ci.yml/badge.svg)](https://github.com/gabdsg/vscode-meteor-toolbox/actions/workflows/ci.yml)
+[![CI](https://github.com/gabdsg/vscode-meteor-impact/actions/workflows/ci.yml/badge.svg)](https://github.com/gabdsg/vscode-meteor-impact/actions/workflows/ci.yml)
 
 # Meteor Impact
 
