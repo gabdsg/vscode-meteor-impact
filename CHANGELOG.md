@@ -4,6 +4,28 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+
+-   **Fix the language server reading stale disk content instead of the
+    open buffer**: `TextDocuments.get` is keyed by the URI string but was
+    called with a URI object, so every provider silently worked from the
+    last saved file. Worst case was formatting: edits computed against
+    stale disk text were applied to the live buffer, splicing duplicated
+    fragments into the document (real-world file corruption).
+-   Formatting now refuses to produce edits when the document has no
+    synced buffer, so format edits can never again be computed from disk
+    content.
+-   Formatting also skips Blaze files that don't parse (e.g. a stray
+    `</template>`), keeping the parse error visible instead of
+    re-indenting broken markup. Non-Blaze HTML pages still format.
+-   The language server logs its version on startup, so stale-build
+    sessions are easy to spot.
+-   Fix an indexing error on `Template.hasOwnProperty(...)` and other
+    `Object.prototype` method calls on `Template` (seen in
+    `aldeed:template-extension`): the property name was mistaken for a
+    template reference and the inherited function crashed the scan of
+    that file.
+
 ## [2.0.1] - 2026-07-06
 
 Hardening from the first large-app dogfooding run.

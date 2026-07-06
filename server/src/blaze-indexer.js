@@ -188,6 +188,13 @@ class BlazeIndexer {
         const templateName = this.getTemplateNameFromProperty(node.property);
         if (!templateName) return;
 
+        // Template.hasOwnProperty(t) and friends are method calls, not
+        // template references: the inherited function is truthy, so the
+        // `|| []` guard below kept it and `.some` crashed indexing.
+        // ponytail: a template literally named "toString" loses JS-rename
+        // support; switch the map to Object.create(null) if that ever matters.
+        if (templateName in Object.prototype) return;
+
         const { loc } = node.property;
         const entryKey = `${uri.fsPath}${loc.start.line}${loc.start.column}`;
 

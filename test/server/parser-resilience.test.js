@@ -1,6 +1,10 @@
 const assert = require("assert");
 
-const { loadFixtureIndexer, fixtureUri } = require("./test-utils");
+const {
+    loadFixtureIndexer,
+    fixtureUri,
+    overrideContent,
+} = require("./test-utils");
 
 // Real-world file shapes reported from a large Meteor app: mustaches
 // without names ({{this}}), Spacebars-valid-but-mustache-invalid files,
@@ -67,6 +71,23 @@ describe("Indexer resilience on real-world projects", () => {
         assert.ok(!indexer.blazeIndexer.templateIndexMap["ghost"]);
     });
 
+    it("survives Object.prototype method calls on Template", () => {
+        // Template.hasOwnProperty(t) looked like a template reference and
+        // the inherited function made `map[name] || []` skip its guard,
+        // crashing indexing. It must neither error nor be recorded.
+        assert.ok(
+            ![...indexer.parsingErrors.keys()].some((p) =>
+                p.endsWith("template-utils.js")
+            )
+        );
+        assert.ok(
+            !Object.prototype.hasOwnProperty.call(
+                indexer.blazeIndexer.templateJsReferences,
+                "hasOwnProperty"
+            )
+        );
+    });
+
     it("never indexes nested node_modules", () => {
         assert.ok(
             !indexer.projectUris.some(({ fsPath }) =>
@@ -78,12 +99,7 @@ describe("Indexer resilience on real-world projects", () => {
     it("treats a file turning non-Blaze as a removal on reindex", () => {
         const uri = fixtureUri("resilient-project", "client/dynamic.html");
         const overrides = new Map();
-        indexer.documentsInstance = {
-            get: (u) =>
-                overrides.has(u.fsPath)
-                    ? { getText: () => overrides.get(u.fsPath) }
-                    : undefined,
-        };
+        overrideContent(indexer, overrides);
 
         const fsPath = indexer.parseUri(uri).fsPath;
         overrides.set(fsPath, "<!DOCTYPE html>\n<html><body>x</body></html>");

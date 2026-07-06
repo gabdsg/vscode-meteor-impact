@@ -283,6 +283,23 @@ describe("ServerBase utilities", () => {
         );
     });
 
+    it("looks up open buffers by string URI, like TextDocuments does", () => {
+        // vscode-languageserver's TextDocuments is a Map keyed by the
+        // client's URI string: a URI object always misses, silently
+        // reading stale disk content instead of the open buffer.
+        const uriString = "file:///not-on-disk/open-buffer.html";
+        const synced = new Map([
+            [uriString, { getText: () => "buffer content" }],
+        ]);
+        const base = new ServerBase(
+            serverInstanceMock,
+            { get: (key) => synced.get(key) },
+            `file://${__dirname}`
+        );
+
+        assert.strictEqual(base.getFileContent(uriString), "buffer content");
+    });
+
     it("resolves the sibling code-behind, preferring existing files", async () => {
         const { rootPath } = await loadFixtureIndexer("basic-project");
         const base = new ServerBase(

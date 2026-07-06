@@ -78,7 +78,11 @@ class ServerBase {
 
         const uri = this.parseUri(_uri);
 
-        const fromDocumentInstance = this.documentsInstance.get(uri);
+        // TextDocuments is keyed by the client's URI string; a URI object
+        // always misses and we'd silently read stale disk content.
+        const fromDocumentInstance = this.documentsInstance.get(
+            uri.toString()
+        );
         if (!!fromDocumentInstance) {
             return fromDocumentInstance.getText(range);
         }

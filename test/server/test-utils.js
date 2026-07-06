@@ -25,9 +25,24 @@ const loadFixtureIndexer = async (fixtureName, indexerOptions = {}) => {
 const fixtureUri = (fixtureName, relativePath) =>
     `file://${path.join(FIXTURES_PATH, fixtureName, relativePath)}`;
 
+// Simulates open editor buffers: getFileContent reads through the
+// documents instance, keyed - like the real TextDocuments - by the URI
+// string. Overrides are a Map keyed by fsPath for test convenience.
+const overrideContent = (indexer, overrides) => {
+    indexer.documentsInstance = {
+        get: (key) => {
+            const { fsPath } = indexer.parseUri(key);
+            return overrides.has(fsPath)
+                ? { getText: () => overrides.get(fsPath) }
+                : undefined;
+        },
+    };
+};
+
 module.exports = {
     loadFixtureIndexer,
     fixtureUri,
     serverInstanceMock,
     documentsInstanceMock,
+    overrideContent,
 };

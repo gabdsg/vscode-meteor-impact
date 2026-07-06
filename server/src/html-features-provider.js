@@ -56,9 +56,39 @@ class HtmlFeaturesProvider extends ServerBase {
         try {
             if (!this.isFileSpacebarsHTML(uri)) return;
 
+            // Format edits are applied to the live buffer: computing them
+            // from the disk fallback splices stale fragments into the
+            // document whenever buffer and disk differ. No synced buffer,
+            // no formatting.
+            const document = this.documentsInstance.get(
+                this.parseUri(uri).toString()
+            );
+            if (!document) return;
+
+            const content = document.getText();
+
+            // Blaze files that don't parse (a stray </template>, an
+            // unclosed block) must not be silently re-indented: that
+            // launders the damage into "formatted" output. Keep the parse
+            // error visible instead. Full-page HTML without <template>
+            // tags is not Blaze and still formats as plain HTML.
+            try {
+                const {
+                    SpacebarsCompiler,
+                } = require("@blastjs/spacebars-compiler");
+                SpacebarsCompiler.parse(content);
+            } catch (e) {
+                if (/<template[\s>]/i.test(content)) {
+                    console.warn(
+                        `Formatting skipped for ${uri}: the file does not parse. ${e}`
+                    );
+                    return;
+                }
+            }
+
             return require("./html-language-service").getHtmlFormattingEdits(
                 this.parseUri(uri),
-                this.getFileContent(uri),
+                content,
                 options,
                 range
             );

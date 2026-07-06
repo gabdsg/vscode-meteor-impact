@@ -9,6 +9,7 @@ const {
     loadFixtureIndexer,
     serverInstanceMock,
     documentsInstanceMock,
+    overrideContent,
 } = require("./test-utils");
 
 const computeDiagnostics = (indexer) =>
@@ -53,12 +54,7 @@ describe("Parse errors as diagnostics", () => {
         const fooHtmlPath = path.join(rootPath, "client/foo.html");
         const originalContent = fs.readFileSync(fooHtmlPath, "utf-8");
         const overrides = new Map();
-        indexer.documentsInstance = {
-            get: (uri) =>
-                overrides.has(uri.fsPath)
-                    ? { getText: () => overrides.get(uri.fsPath) }
-                    : undefined,
-        };
+        overrideContent(indexer, overrides);
 
         // Break the file: parse fails, error recorded.
         overrides.set(

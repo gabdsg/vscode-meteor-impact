@@ -2,16 +2,11 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const { loadFixtureIndexer, fixtureUri } = require("./test-utils");
-
-const overrideContent = (indexer, overrides) => {
-    indexer.documentsInstance = {
-        get: (uri) =>
-            overrides.has(uri.fsPath)
-                ? { getText: () => overrides.get(uri.fsPath) }
-                : undefined,
-    };
-};
+const {
+    loadFixtureIndexer,
+    fixtureUri,
+    overrideContent,
+} = require("./test-utils");
 
 describe("Incremental reindexing - removal of derived entries", () => {
     it("updates event maps when an event key is renamed", async () => {

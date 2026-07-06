@@ -2,18 +2,11 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
-const { loadFixtureIndexer, fixtureUri } = require("./test-utils");
-
-// Simulates open editor buffers: reindexFile reads through the documents
-// instance, so overriding it mimics unsaved edits.
-const overrideContent = (indexer, overrides) => {
-    indexer.documentsInstance = {
-        get: (uri) =>
-            overrides.has(uri.fsPath)
-                ? { getText: () => overrides.get(uri.fsPath) }
-                : undefined,
-    };
-};
+const {
+    loadFixtureIndexer,
+    fixtureUri,
+    overrideContent,
+} = require("./test-utils");
 
 describe("Indexer - incremental reindexing", () => {
     let indexer;

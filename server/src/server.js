@@ -28,6 +28,13 @@ class ServerInstance {
         this.documents = new TextDocuments(TextDocument);
 
         this.connection.onInitialize(async (params) => {
+            // Stale-build confusion is real: say who we are first.
+            console.info(
+                `* Meteor Impact language server ${
+                    require("../../package.json").version
+                }`
+            );
+
             this.rootUri =
                 params.rootUri ||
                 (params.rootPath && `file://${params.rootPath}`);
