@@ -72,6 +72,10 @@
                             "ignoreDirsOnIndexing": {
                                 "type": "string",
                                 "description": "Colon-delimited list of directories to not index on the language server. The path should be relative to the current workspace."
+                            },
+                            "closingTagHints": {
+                                "type": "boolean",
+                                "description": "Show ghost hints after the closers of long blocks and elements ({{/if}} gets its condition, </div> its id/classes)."
                             }
                         },
                         "additionalProperties": false,
@@ -80,7 +84,8 @@
                             "port": "3000",
                             "additionalArgs": null,
                             "meteorPackageDirs": null,
-                            "ignoreDirsOnIndexing": null
+                            "ignoreDirsOnIndexing": null,
+                            "closingTagHints": true
                         }
                     }
                 }

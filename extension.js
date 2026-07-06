@@ -29,6 +29,7 @@ const {
     generateMeteorSettingsTypes,
 } = require("./src/generate-settings-types");
 const { registerBlazeBlockAutoClose } = require("./src/blaze-auto-close");
+const { registerClosingTagHints } = require("./src/closing-tag-decorations");
 
 let notifiedAboutTsconfig = false;
 
@@ -213,6 +214,7 @@ async function activate(context) {
         fileNestingDisposable,
         settingsTypesDisposable,
         registerBlazeBlockAutoClose(),
+        registerClosingTagHints(),
         ...registerMeteorPackagesFileProviders()
     );
 }

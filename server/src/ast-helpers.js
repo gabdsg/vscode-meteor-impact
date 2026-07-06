@@ -172,11 +172,37 @@ const extractFunctionSignature = (fnNode, fileContent) => {
     };
 };
 
+/**
+ * Cleaned text of the JSDoc block sitting directly above the node that
+ * starts at nodeStart (only whitespace in between), or undefined.
+ */
+const extractJsDoc = (fileContent, nodeStart) => {
+    if (typeof fileContent !== "string" || nodeStart == null) return;
+
+    const before = fileContent.slice(0, nodeStart).trimEnd();
+    if (!before.endsWith("*/")) return;
+
+    // Comments don't nest: the last "/*" opens the trailing comment.
+    // Plain "/*" blocks are not documentation.
+    const open = before.lastIndexOf("/*");
+    if (open === -1 || !before.startsWith("/**", open)) return;
+
+    const text = before
+        .slice(open + 3, before.length - 2)
+        .split("\n")
+        .map((line) => line.replace(/^\s*\*? ?/, "").trimEnd())
+        .join("\n")
+        .trim();
+
+    return text || undefined;
+};
+
 module.exports = {
     createPositionObject,
     AstWalker,
     NODE_TYPES,
     parseJsSource,
     extractFunctionSignature,
+    extractJsDoc,
     NODE_NAMES,
 };

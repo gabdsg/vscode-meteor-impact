@@ -1,0 +1,8 @@
+.extra-btn,
+.extra-btn--active:hover {
+    color: #abc;
+}
+
+#main-area {
+    content: ".fake-class-in-string";
+}

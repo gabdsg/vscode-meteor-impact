@@ -7,7 +7,7 @@
  */
 
 // Bump when the shape of the index maps changes.
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 
 const cacheFilePath = (rootUri) => {
     const crypto = require("crypto");

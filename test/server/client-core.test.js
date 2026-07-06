@@ -89,3 +89,131 @@ describe("Counterpart file cycle", () => {
         assert.deepStrictEqual(counterpartCandidates("/app/readme.md"), []);
     });
 });
+
+describe("Closing tag hints", () => {
+    const { computeClosingTagHints } = require("../../src/closing-tag-hints");
+
+    const hintTexts = (content, options) =>
+        computeClosingTagHints(content, options).map(({ text }) => text);
+
+    it("hints the condition at the closer of a long block", () => {
+        const content = [
+            "{{#if isSavingState}}",
+            "<span>a</span>",
+            "<span>b</span>",
+            "<span>c</span>",
+            "<span>d</span>",
+            "{{/if}}",
+        ].join("\n");
+
+        const hints = computeClosingTagHints(content);
+        assert.deepStrictEqual(hints, [
+            { offset: content.length, text: "if isSavingState" },
+        ]);
+    });
+
+    it("keeps the full block arguments in the hint", () => {
+        const content = [
+            "{{#each product in shareableProducts}}",
+            "<i>1</i>",
+            "<i>2</i>",
+            "<i>3</i>",
+            "<i>4</i>",
+            "{{/each}}",
+        ].join("\n");
+
+        assert.deepStrictEqual(hintTexts(content), [
+            "each product in shareableProducts",
+        ]);
+    });
+
+    it("hints {{else}} with the enclosing condition", () => {
+        const content = [
+            "{{#if ready}}",
+            "<b>1</b>",
+            "<b>2</b>",
+            "{{else}}",
+            "<b>3</b>",
+            "<b>4</b>",
+            "{{/if}}",
+        ].join("\n");
+
+        assert.deepStrictEqual(hintTexts(content), [
+            "if ready",
+            "if ready",
+        ]);
+    });
+
+    it("skips short blocks, trailing content and commented blocks", () => {
+        // Inline/short: no hints.
+        assert.deepStrictEqual(
+            hintTexts("{{#if x}}Hide{{else}}Show{{/if}}"),
+            []
+        );
+
+        // Something after the closer on the same line: no hint there.
+        const trailing = [
+            "{{#if x}}",
+            "<b>1</b>",
+            "<b>2</b>",
+            "<b>3</b>",
+            "<b>4</b>",
+            "{{/if}} <span>tail</span>",
+        ].join("\n");
+        assert.deepStrictEqual(hintTexts(trailing), []);
+
+        // Commented-out blocks are not real blocks.
+        const commented = [
+            "<!-- {{#if x}}",
+            "<b>1</b>",
+            "<b>2</b>",
+            "<b>3</b>",
+            "<b>4</b>",
+            "{{/if}} -->",
+        ].join("\n");
+        assert.deepStrictEqual(hintTexts(commented), []);
+    });
+
+    it("hints long HTML elements with their class and id", () => {
+        const content = [
+            '<div id="main" class="toolbar wide">',
+            "<span>1</span>",
+            "<span>2</span>",
+            "<span>3</span>",
+            "<span>4</span>",
+            "</div>",
+        ].join("\n");
+
+        assert.deepStrictEqual(hintTexts(content), ["#main.toolbar.wide"]);
+    });
+
+    it("skips short elements and elements without class or id", () => {
+        assert.deepStrictEqual(
+            hintTexts('<div class="toolbar"><span>x</span></div>'),
+            []
+        );
+
+        const anonymous = [
+            "<div>",
+            "<span>1</span>",
+            "<span>2</span>",
+            "<span>3</span>",
+            "<span>4</span>",
+            "</div>",
+        ].join("\n");
+        assert.deepStrictEqual(hintTexts(anonymous), []);
+    });
+
+    it("strips mustaches from hinted class values", () => {
+        const content = [
+            '<div class="panes {{#if showPreview}}with-preview{{/if}}">',
+            "<span>1</span>",
+            "<span>2</span>",
+            "<span>3</span>",
+            "<span>4</span>",
+            "</div>",
+        ].join("\n");
+
+        assert.deepStrictEqual(hintTexts(content), [".panes"]);
+    });
+});

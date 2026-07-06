@@ -74,6 +74,7 @@ class BlazeIndexer {
         kind,
         key,
         signature,
+        jsdoc,
     }) {
         this.templateIndexMap[templateName] =
             this.templateIndexMap[templateName] || {};
@@ -99,6 +100,7 @@ class BlazeIndexer {
             keyLoc: key?.loc,
             keyIsLiteral: key?.type === NODE_TYPES.LITERAL,
             signature,
+            jsdoc,
         };
     }
 
@@ -141,6 +143,7 @@ class BlazeIndexer {
             NODE_TYPES,
             NODE_NAMES,
             extractFunctionSignature,
+            extractJsDoc,
         } = require("./ast-helpers");
         const { TEMPLATE_CALLERS } = require("./constants");
 
@@ -166,6 +169,7 @@ class BlazeIndexer {
             end,
             uri,
             signature: extractFunctionSignature(helperFunction, fileContent),
+            jsdoc: extractJsDoc(fileContent, node.start),
         };
     }
 
@@ -217,7 +221,7 @@ class BlazeIndexer {
     }
 
     indexHelpers({ node, uri, fileContent }) {
-        const { NODE_TYPES, extractFunctionSignature } =
+        const { NODE_TYPES, extractFunctionSignature, extractJsDoc } =
             require("./ast-helpers");
 
         if (!node || node.type !== NODE_TYPES.CALL_EXPRESSION) {
@@ -272,6 +276,7 @@ class BlazeIndexer {
                         prop.value,
                         fileContent
                     ),
+                    jsdoc: extractJsDoc(fileContent, prop.start),
                 });
 
                 if (caller === TEMPLATE_CALLERS.EVENTS) {

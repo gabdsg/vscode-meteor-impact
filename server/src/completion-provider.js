@@ -201,6 +201,64 @@ class CompletionProvider extends ServerBase {
         ];
     }
 
+    /**
+     * Class/id completions from same-directory style files when the
+     * cursor sits inside an unclosed class="..." or id="..." value.
+     */
+    createStyleSelectorCompletions({ uri, textBefore }) {
+        const attribute = textBefore.match(
+            /\b(class|id)\s*=\s*(["'])(?:(?!\2).)*$/
+        );
+        if (!attribute) return;
+
+        const fs = require("fs");
+        const path = require("path");
+        const { extractStyleSelectors } = require("./text-utils");
+        const {
+            CompletionItem,
+            CompletionItemKind,
+        } = require("vscode-languageserver");
+
+        const directory = path.dirname(this.parseUri(uri).fsPath);
+        const wantedKind = attribute[1] === "class" ? "classes" : "ids";
+
+        const items = new Map();
+        let styleFiles;
+        try {
+            styleFiles = fs
+                .readdirSync(directory)
+                .filter((name) => /\.(css|less|scss)$/i.test(name));
+        } catch (e) {
+            return;
+        }
+
+        for (const fileName of styleFiles) {
+            let selectors;
+            try {
+                selectors = extractStyleSelectors(
+                    this.getFileContent(
+                        `file://${path.join(directory, fileName)}`
+                    )
+                );
+            } catch (e) {
+                continue;
+            }
+
+            for (const name of selectors[wantedKind]) {
+                if (items.has(name)) continue;
+                items.set(name, {
+                    ...CompletionItem.create(name),
+                    kind: CompletionItemKind.Value,
+                    detail: `CSS ${
+                        attribute[1] === "class" ? "class" : "id"
+                    } in ${fileName}`,
+                });
+            }
+        }
+
+        return items.size ? [...items.values()] : undefined;
+    }
+
     handleHtmlCompletion({ uri, position }) {
         const {
             positionToOffset,
@@ -211,9 +269,11 @@ class CompletionProvider extends ServerBase {
         const offset = positionToOffset(content, position);
         const textBefore = content.slice(0, offset);
 
-        // Outside a mustache, delegate to the embedded HTML language
+        // Outside a mustache, offer style-file selectors inside class/id
+        // attributes, otherwise delegate to the embedded HTML language
         // service so the regular HTML experience keeps working.
         const delegateToHtml = () =>
+            this.createStyleSelectorCompletions({ uri, textBefore }) ||
             require("./html-language-service").getHtmlCompletions(
                 this.parseUri(uri),
                 content,

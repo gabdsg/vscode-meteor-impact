@@ -159,6 +159,33 @@ const blankHtmlComments = (content) =>
         comment.replace(/[^\n]/g, " ")
     );
 
+/**
+ * Class and id names mentioned in CSS/LESS content, for completion inside
+ * class="..." / id="..." attributes.
+ * ponytail: regex over the source, so LESS "&__child" parent selectors
+ * don't resolve; use a real CSS parser if that ever matters.
+ */
+const extractStyleSelectors = (styleContent) => {
+    const content = styleContent
+        .replace(/\/\*[\s\S]*?\*\//g, " ")
+        .replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, " ")
+        .replace(/url\([^)]*\)/g, " ")
+        .replace(/\/\/[^\n]*/g, " ");
+
+    const classes = new Set();
+    for (const [, name] of content.matchAll(/\.(-?[A-Za-z_][\w-]*)/g)) {
+        classes.add(name);
+    }
+
+    const ids = new Set();
+    for (const [, name] of content.matchAll(/#(-?[A-Za-z_][\w-]*)/g)) {
+        // #fff / #aabbcc are colors, not ids.
+        if (!/^[0-9a-fA-F]{3,8}$/.test(name)) ids.add(name);
+    }
+
+    return { classes: [...classes], ids: [...ids] };
+};
+
 module.exports = {
     positionToOffset,
     offsetToLoc,
@@ -167,4 +194,5 @@ module.exports = {
     getBlockVariablesAtOffset,
     getBlockRanges,
     blankHtmlComments,
+    extractStyleSelectors,
 };

@@ -6,6 +6,15 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+-   **Closing-tag hints**: long `{{#block}}`s show their opening condition
+    as a ghost hint at `{{/block}}` and `{{else}}` (`« if isSavingState`),
+    and long HTML elements show their id/classes at the closing tag
+    (`« .toolbar`). Toggle with the `closingTagHints` setting.
+-   **CSS class/id completion**: inside `class="..."` / `id="..."`,
+    selectors from same-directory `.css`/`.less`/`.scss` files are
+    offered.
+-   **JSDoc in hovers**: the `/** ... */` block above a template or
+    global helper definition now shows in its hover card.
 -   **Fix the language server reading stale disk content instead of the
     open buffer**: `TextDocuments.get` is keyed by the URI string but was
     called with a URI object, so every provider silently worked from the

@@ -54,6 +54,11 @@ const getHtmlHover = (uri, content, position) => {
 const getHtmlFoldingRanges = (uri, content) =>
     getService().getFoldingRanges(createDocument(uri, content));
 
+// Root nodes of the parsed HTML tree (start/end/endTagStart/attributes),
+// used by the closing-tag hint decorations.
+const getHtmlNodes = (uri, content) =>
+    getService().parseHTMLDocument(createDocument(uri, content)).roots;
+
 const getHtmlLinkedEditingRanges = (uri, content, position) => {
     const service = getService();
     const document = createDocument(uri, content);
@@ -81,4 +86,5 @@ module.exports = {
     getHtmlFoldingRanges,
     getHtmlLinkedEditingRanges,
     getHtmlFormattingEdits,
+    getHtmlNodes,
 };

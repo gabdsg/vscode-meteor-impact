@@ -114,3 +114,40 @@ describe("HoverProvider", () => {
         assert.ok(value.toLowerCase().includes("div"));
     });
 });
+
+describe("HoverProvider - JSDoc", () => {
+    let indexer;
+
+    before(async () => {
+        ({ indexer } = await loadFixtureIndexer("jsdoc-project"));
+    });
+
+    const hoverAt = (line, character) =>
+        createProvider(indexer).onHoverRequest({
+            position: { line, character },
+            textDocument: {
+                uri: fixtureUri("jsdoc-project", "client/doc.html"),
+            },
+        });
+
+    it("shows the JSDoc of a template helper", () => {
+        // {{fullName}} in doc.html.
+        const { value } = hoverAt(1, 13).contents;
+        assert.ok(value.includes("Formats the user's full name."));
+        assert.ok(value.includes('Falls back to "unknown".'));
+        assert.ok(!value.includes("*/"));
+    });
+
+    it("shows nothing extra for helpers without JSDoc", () => {
+        // {{plain}} in doc.html.
+        const { value } = hoverAt(2, 13).contents;
+        assert.ok(value.includes("plain"));
+        assert.ok(!value.includes("Formats the user's full name."));
+    });
+
+    it("shows the JSDoc of a global helper", () => {
+        // {{formatDate now}} in doc.html.
+        const { value } = hoverAt(3, 13).contents;
+        assert.ok(value.includes("Renders a localized date."));
+    });
+});

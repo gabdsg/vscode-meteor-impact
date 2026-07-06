@@ -111,3 +111,51 @@ describe("CompletionProvider - context aware HTML completion", () => {
         assert.ok(!labels.includes("peopleCount"));
     });
 });
+
+describe("CompletionProvider - CSS classes and ids from style files", () => {
+    let provider;
+
+    before(async () => {
+        const { indexer } = await loadFixtureIndexer("css-project");
+        provider = createProvider(indexer);
+    });
+
+    const completeAt = (line, character) =>
+        provider.onCompletionRequest({
+            position: { line, character },
+            textDocument: {
+                uri: fixtureUri("css-project", "client/widget.html"),
+            },
+        });
+
+    it("offers classes from same-directory css/less inside class attributes", () => {
+        // Inside class="" of widget.html.
+        const labels = labelsOf(completeAt(1, 16));
+        assert.ok(labels.includes("widget-card"));
+        assert.ok(labels.includes("widget-card-title"), "nested LESS class");
+        assert.ok(labels.includes("extra-btn"));
+        assert.ok(labels.includes("extra-btn--active"), "selector list");
+
+        // Ids, comments, strings and asset urls are not classes.
+        assert.ok(!labels.includes("main-area"));
+        assert.ok(!labels.includes("not-a-class"));
+        assert.ok(!labels.includes("fake-class-in-string"));
+        assert.ok(!labels.includes("png"));
+    });
+
+    it("offers ids inside id attributes, never hex colors", () => {
+        // Inside id="" of widget.html.
+        const labels = labelsOf(completeAt(2, 18));
+        assert.ok(labels.includes("main-area"));
+        assert.ok(!labels.includes("widget-card"));
+        assert.ok(!labels.includes("fff"), "hex colors are not ids");
+        assert.ok(!labels.includes("abc"), "hex colors are not ids");
+    });
+
+    it("keeps normal behavior outside class/id attributes", () => {
+        // On the div tag name itself.
+        const result = completeAt(1, 6);
+        const labels = labelsOf(result?.items || result);
+        assert.ok(!labels.includes("widget-card"));
+    });
+});

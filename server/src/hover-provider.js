@@ -19,8 +19,10 @@ class HoverProvider extends ServerBase {
         }
     }
 
-    createHover({ name, subtitle, defUri, defLine }) {
+    createHover({ name, subtitle, defUri, defLine, doc }) {
         const contentLines = [`**${name}**${subtitle ? ` — ${subtitle}` : ""}`];
+
+        if (doc) contentLines.push(doc);
 
         if (defUri && defLine) {
             const snippet = this.getDefinitionSnippet(defUri, defLine);
@@ -133,6 +135,7 @@ class HoverProvider extends ServerBase {
                 subtitle: `helper of template \`${templateName}\``,
                 defUri: scopedHelper.uri,
                 defLine: scopedHelper.start.line,
+                doc: scopedHelper.jsdoc,
             });
         }
 
@@ -143,6 +146,7 @@ class HoverProvider extends ServerBase {
                 subtitle: "global helper",
                 defUri: globalHelper.uri,
                 defLine: globalHelper.start.line,
+                doc: globalHelper.jsdoc,
             });
         }
 
@@ -199,6 +203,7 @@ class HoverProvider extends ServerBase {
                 subtitle: "template helper",
                 defUri: scopedHelper.uri,
                 defLine: scopedHelper.start.line,
+                doc: scopedHelper.jsdoc,
             });
         }
 
@@ -209,6 +214,7 @@ class HoverProvider extends ServerBase {
                 subtitle: "global helper",
                 defUri: globalHelper.uri,
                 defLine: globalHelper.start.line,
+                doc: globalHelper.jsdoc,
             });
         }
 
