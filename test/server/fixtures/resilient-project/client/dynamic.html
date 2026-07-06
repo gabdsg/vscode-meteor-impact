@@ -1,0 +1,7 @@
+<template name="dynamic">
+    {{#each items}}
+        <span>{{this}}</span>
+        <span>{{.}}</span>
+    {{/each}}
+    {{#if visible}}<b>{{label}}</b>{{/if}}
+</template>

@@ -148,6 +148,17 @@ const getBlockRanges = (content) => {
     return ranges;
 };
 
+/**
+ * Blank out HTML comments, keeping every offset and line break intact.
+ * Meteor's Spacebars ignores mustaches inside HTML comments (e.g. a
+ * commented-out {{/if}}), but the mustache parser used for indexing does
+ * not, so its input gets the comments blanked first.
+ */
+const blankHtmlComments = (content) =>
+    content.replace(/<!--[\s\S]*?-->/g, (comment) =>
+        comment.replace(/[^\n]/g, " ")
+    );
+
 module.exports = {
     positionToOffset,
     offsetToLoc,
@@ -155,4 +166,5 @@ module.exports = {
     getWrappingTemplateName,
     getBlockVariablesAtOffset,
     getBlockRanges,
+    blankHtmlComments,
 };

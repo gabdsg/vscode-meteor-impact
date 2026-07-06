@@ -77,8 +77,8 @@ describe("Indexer - incremental reindexing", () => {
     it("keeps the previous index when the file is unparseable", () => {
         const fooHtmlPath = path.join(rootPath, "client/foo.html");
 
-        // Unclosed block: the handlebars parser throws.
-        overrides.set(fooHtmlPath, "{{#if broken}}");
+        // Unclosed block inside a template tag: the parser throws.
+        overrides.set(fooHtmlPath, '<template name="foo">{{#if broken}}');
 
         const reindexed = indexer.reindexFile(
             fixtureUri("basic-project", "client/foo.html")

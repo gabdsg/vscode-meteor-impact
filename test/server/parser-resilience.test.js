@@ -1,0 +1,104 @@
+const assert = require("assert");
+
+const { loadFixtureIndexer, fixtureUri } = require("./test-utils");
+
+// Real-world file shapes reported from a large Meteor app: mustaches
+// without names ({{this}}), Spacebars-valid-but-mustache-invalid files,
+// full-page HTML (email templates, generated reports) and nested
+// node_modules. None of them may break indexing or spam errors.
+describe("Indexer resilience on real-world projects", () => {
+    let indexer;
+    let result;
+
+    before(async () => {
+        ({ indexer, result } = await loadFixtureIndexer("resilient-project"));
+    });
+
+    it("survives {{this}}, {{.}} and literal mustaches", () => {
+        // The load completed (previously addUsage threw and killed the
+        // server initialize) and the template indexed normally.
+        assert.ok(indexer.loaded);
+        assert.ok(indexer.blazeIndexer.templateIndexMap["dynamic"]);
+        assert.ok(indexer.blazeIndexer.htmlUsageMap["items"]);
+
+        // No junk keys leaked into the usage map.
+        assert.ok(!("undefined" in indexer.blazeIndexer.htmlUsageMap));
+        assert.ok(!("true" in indexer.blazeIndexer.htmlUsageMap));
+        assert.ok(!("this" in indexer.blazeIndexer.htmlUsageMap));
+    });
+
+    it("skips full-page HTML files quietly", () => {
+        // Email templates and generated reports are not Blaze files:
+        // no parse error is recorded for them...
+        assert.strictEqual(result.hasErrors, false);
+        assert.strictEqual(indexer.parsingErrors.size, 0);
+
+        // ...and they are not in the sources map.
+        const sourcePaths = Object.keys(indexer.getSources());
+        assert.ok(
+            !sourcePaths.some((p) => p.endsWith("school-invitation.html"))
+        );
+        assert.ok(!sourcePaths.some((p) => p.endsWith("report.html")));
+    });
+
+    it("degrades to Spacebars-only indexing when the mustache parser rejects a file Meteor accepts", () => {
+        // loose.html has a stray brace after {{cardId}} - Spacebars (and
+        // the Meteor build) accept it, so it must not be flagged as a
+        // parse error and the file stays available to providers.
+        assert.ok(
+            ![...indexer.parsingErrors.keys()].some((p) =>
+                p.endsWith("loose.html")
+            )
+        );
+        const looseSource = Object.entries(indexer.getSources()).find(
+            ([fsPath]) => fsPath.endsWith("loose.html")
+        );
+        assert.ok(looseSource, "loose.html should stay in the sources");
+        assert.ok(looseSource[1].htmlJs, "htmlJs indexing is preserved");
+    });
+
+    it("ignores mustaches inside HTML comments, like Meteor does", () => {
+        // The commented-out {{/if}} did not fail the parse: the template
+        // and its helper usages indexed fully.
+        assert.ok(indexer.blazeIndexer.templateIndexMap["commented"]);
+        assert.ok(indexer.blazeIndexer.htmlUsageMap["rows"]);
+
+        // A <template> tag inside a comment is not a real template.
+        assert.ok(!indexer.blazeIndexer.templateIndexMap["ghost"]);
+    });
+
+    it("never indexes nested node_modules", () => {
+        assert.ok(
+            !indexer.projectUris.some(({ fsPath }) =>
+                fsPath.includes("node_modules")
+            )
+        );
+    });
+
+    it("treats a file turning non-Blaze as a removal on reindex", () => {
+        const uri = fixtureUri("resilient-project", "client/dynamic.html");
+        const overrides = new Map();
+        indexer.documentsInstance = {
+            get: (u) =>
+                overrides.has(u.fsPath)
+                    ? { getText: () => overrides.get(u.fsPath) }
+                    : undefined,
+        };
+
+        const fsPath = indexer.parseUri(uri).fsPath;
+        overrides.set(fsPath, "<!DOCTYPE html>\n<html><body>x</body></html>");
+
+        assert.strictEqual(indexer.reindexFile(uri), false);
+        // No error squiggle; the HTML-side definition is gone (the entry
+        // itself survives because dynamic.js still defines its helpers).
+        assert.ok(!indexer.parsingErrors.has(fsPath));
+        assert.ok(!indexer.blazeIndexer.templateIndexMap["dynamic"]?.node);
+        assert.ok(!indexer.blazeIndexer.htmlUsageMap["items"]);
+
+        // Restore: everything comes back.
+        overrides.delete(fsPath);
+        assert.strictEqual(indexer.reindexFile(uri), true);
+        assert.ok(indexer.blazeIndexer.templateIndexMap["dynamic"].node);
+        assert.ok(indexer.blazeIndexer.htmlUsageMap["items"]);
+    });
+});

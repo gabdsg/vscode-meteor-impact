@@ -61,7 +61,10 @@ describe("Parse errors as diagnostics", () => {
         };
 
         // Break the file: parse fails, error recorded.
-        overrides.set(fooHtmlPath, "{{#each broken}}");
+        overrides.set(
+            fooHtmlPath,
+            '<template name="foo">{{#each broken}}</template>'
+        );
         assert.strictEqual(
             indexer.reindexFile(`file://${fooHtmlPath}`),
             false

@@ -58,7 +58,9 @@ class Indexer extends ServerBase {
                         "tests/**",
                         "**/**.tests.js",
                         "**/**.tests.ts",
-                        "node_modules/**",
+                        // Anywhere in the tree, not just the root: apps can
+                        // have nested installs (e.g. playwright/node_modules).
+                        "**/node_modules/**",
                         // Build output and package metadata are not app
                         // sources (packages are indexed separately).
                         ".meteor/**",
@@ -159,22 +161,58 @@ class Indexer extends ServerBase {
         });
     }
 
+    /**
+     * Parse a file into the index representation. Returns null for HTML
+     * files that are not Blaze templates at all (full pages like email
+     * templates or build reports) - those are skipped, not errors.
+     */
     parseFile({ uri, fileContent }) {
         const { AstWalker, parseJsSource } = require("./ast-helpers");
         const { SpacebarsCompiler } = require("@blastjs/spacebars-compiler");
         const { parse: handlebarsParser } = require("@handlebars/parser");
+        const { blankHtmlComments } = require("./text-utils");
 
         const extension = this.getFileExtension(uri);
         const isFileHtml = this.isFileSpacebarsHTML(uri);
 
-        const astWalker = new AstWalker(
-            fileContent,
-            isFileHtml ? handlebarsParser : parseJsSource,
-            isFileHtml ? {} : { extension }
-        );
+        if (!isFileHtml) {
+            return {
+                extension,
+                astWalker: new AstWalker(fileContent, parseJsSource, {
+                    extension,
+                }),
+                uri,
+                htmlJs: false,
+                fileContent,
+            };
+        }
 
-        // Also index the htmlJs representation.
-        const htmlJs = isFileHtml && SpacebarsCompiler.parse(fileContent);
+        let htmlJs;
+        try {
+            htmlJs = SpacebarsCompiler.parse(fileContent);
+        } catch (e) {
+            // A file without a single <template> tag is not a Blaze file
+            // (doctype pages, generated reports): skip it quietly. Real
+            // template files with syntax errors still surface as errors.
+            if (!/<template[\s>]/i.test(fileContent)) return null;
+            throw e;
+        }
+
+        // Spacebars is more lenient than the mustache parser (it ignores
+        // mustaches inside HTML comments - blanked below - and tolerates
+        // things like stray braces after a mustache). When only the
+        // mustache parse fails, Meteor still builds the file, so degrade
+        // to htmlJs-only indexing instead of reporting an error.
+        let astWalker;
+        try {
+            astWalker = new AstWalker(
+                blankHtmlComments(fileContent),
+                handlebarsParser,
+                {}
+            );
+        } catch (e) {
+            astWalker = new AstWalker();
+        }
 
         return {
             extension,
@@ -223,13 +261,29 @@ class Indexer extends ServerBase {
 
         this.parsingErrors.delete(uri.fsPath);
 
+        // Not a Blaze file (parseFile skipped it): drop any previous index
+        // entries for it and stop.
+        if (!fileInfo) {
+            [this.blazeIndexer, this.methodsAndPublicationsIndexer].forEach(
+                (i) => i?.removeUri?.(uri.fsPath)
+            );
+            delete this.sources[uri.fsPath];
+            return false;
+        }
+
         [this.blazeIndexer, this.methodsAndPublicationsIndexer].forEach((i) =>
             i?.removeUri?.(uri.fsPath)
         );
 
-        this.indexFileInfo(fileInfo);
-        if (!this.isFileSpacebarsHTML(uri)) {
-            this.indexJsFileUsages(fileInfo);
+        try {
+            this.indexFileInfo(fileInfo);
+            if (!this.isFileSpacebarsHTML(uri)) {
+                this.indexJsFileUsages(fileInfo);
+            }
+        } catch (e) {
+            console.warn(`Incremental index failed for ${uri.fsPath}. ${e}`);
+            this.recordParsingError(uri, e, fileContent);
+            return false;
         }
 
         this.sources[uri.fsPath] = fileInfo;
@@ -293,15 +347,33 @@ class Indexer extends ServerBase {
 
         const validResults = results.filter(Boolean);
 
+        // One broken file must never take the whole server down: indexing
+        // failures are recorded per file and everything else proceeds.
+        const indexSafely = (fileInfo, work) => {
+            try {
+                work(fileInfo);
+            } catch (e) {
+                console.error(`Error indexing ${fileInfo.uri}. ${e}`);
+                this.recordParsingError(
+                    fileInfo.uri,
+                    e,
+                    fileInfo.fileContent
+                );
+                parsingErrors.push({ uri: fileInfo.uri, error: e });
+            }
+        };
+
         // ...but index sequentially in sorted-uri order, so that
         // last-write-wins entries don't depend on I/O completion order.
-        validResults.forEach((fileInfo) => this.indexFileInfo(fileInfo));
+        validResults.forEach((fileInfo) =>
+            indexSafely(fileInfo, (info) => this.indexFileInfo(info))
+        );
 
         // Second pass, once every definition is known.
         validResults.forEach((fileInfo) => {
             if (fileInfo.extension === ".html") return;
 
-            this.indexJsFileUsages(fileInfo);
+            indexSafely(fileInfo, (info) => this.indexJsFileUsages(info));
         });
 
         this.sources = validResults.reduce(
@@ -337,6 +409,7 @@ class Indexer extends ServerBase {
                 encoding: "utf-8",
             });
             const fileInfo = this.parseFile({ uri, fileContent });
+            if (!fileInfo) return undefined;
 
             if (!this.cachedFiles?.has(uri.fsPath)) {
                 this.indexFileInfo(fileInfo);

@@ -103,11 +103,12 @@ class BlazeIndexer {
     }
 
     addUsage({ node, uri, key, map = this.htmlUsageMap }) {
-        if (!node || !uri || !key) {
-            throw new Error(
-                `Expected to receive node, uri and key, but got: ${node}, ${uri} and ${key}.`
-            );
-        }
+        // Not every mustache has a resolvable name: {{this}}, {{.}},
+        // literals ({{true}}) and sub-expression params ({{#if (eq a b)}})
+        // all come through with no head/original. Those are valid Spacebars
+        // with nothing to index - skip them instead of failing the file.
+        if (!node?.loc?.start || !node.loc.end || !uri) return;
+        if (typeof key !== "string" || !key.length) return;
 
         const {
             loc: {
