@@ -4,6 +4,27 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.0.1] - 2026-07-06
+
+Hardening from the first large-app dogfooding run.
+
+-   **Fix a fatal crash on startup**: mustaches with no name to index
+    (`{{this}}`, `{{.}}`, literals, sub-expression params) made the
+    indexer throw during the initial scan, which killed the language
+    server before it could start.
+-   Full-page HTML files (doctype email templates, generated reports)
+    are recognized as non-Blaze and skipped quietly instead of being
+    reported as parse errors.
+-   Files that Meteor's Spacebars accepts but the stricter mustache
+    parser doesn't (commented-out block tags, a stray brace after a
+    mustache) no longer get false-positive error squiggles: HTML
+    comments are ignored like Meteor does, and remaining cases degrade
+    gracefully instead of erroring.
+-   `node_modules` anywhere in the tree (e.g. `playwright/node_modules`)
+    is now excluded from indexing.
+-   One broken file can no longer abort the project scan: indexing
+    failures are contained per file.
+
 ## [2.0.0] - 2026-07-05
 
 First release as **Meteor Impact** (`gabdsg.meteor-impact`), forked from
