@@ -4,11 +4,14 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [2.0.4]
+## [2.0.5]
 
--   The activity bar icon is a proper monochrome flame silhouette
+-   The activity bar icon is a monochrome flame over impact ripples
     instead of a solid circle (the old color PNG's opaque disc was
     swallowed whole by VS Code's icon masking).
+
+## [2.0.4]
+
 -   **Inclusion arguments resolve as data**: after `{{> item title="hello"}}`,
     `{{title}}` inside `item` is no longer an unknown name - it completes
     ("Data passed by callers"), hovers with the passing inclusion site,
