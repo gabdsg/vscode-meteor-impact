@@ -2,7 +2,7 @@
     "name": "meteor-impact",
     "displayName": "Meteor Impact",
     "description": "Full-impact language tooling for Meteor and Blaze: TypeScript-aware indexing, completions, go-to-definition, rename, diagnostics, refactorings and template scaffolding.",
-    "version": "2.0.2",
+    "version": "2.0.3",
     "private": "true",
     "publisher": "gabdsg",
     "license": "MIT",
@@ -75,7 +75,11 @@
                             },
                             "closingTagHints": {
                                 "type": "boolean",
-                                "description": "Show ghost hints after the closers of long blocks and elements ({{/if}} gets its condition, </div> its id/classes)."
+                                "description": "Show ghost hints with the opening condition after the {{/block}} and {{else}} of long Blaze blocks."
+                            },
+                            "htmlClosingTagHints": {
+                                "type": "boolean",
+                                "description": "Show ghost hints with the id/classes after the closing tag of long HTML elements. Off by default."
                             }
                         },
                         "additionalProperties": false,
@@ -85,7 +89,8 @@
                             "additionalArgs": null,
                             "meteorPackageDirs": null,
                             "ignoreDirsOnIndexing": null,
-                            "closingTagHints": true
+                            "closingTagHints": true,
+                            "htmlClosingTagHints": false
                         }
                     }
                 }

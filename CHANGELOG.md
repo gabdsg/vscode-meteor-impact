@@ -4,6 +4,14 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.0.3]
+
+-   Closing-tag hints are now two independent settings:
+    `closingTagHints` keeps the Blaze block hints (`« if isSavingState`
+    at `{{/block}}`/`{{else}}`, on by default), and the HTML element
+    hints (`« .toolbar` at `</div>`) moved to `htmlClosingTagHints`,
+    **off by default**.
+
 ## [2.0.2] - 2026-07-06
 
 Second dogfooding round: a file-corrupting formatter bug and new

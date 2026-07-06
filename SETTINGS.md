@@ -30,9 +30,13 @@ All of Meteor Impact's own options live under a single object:
     // *.tests.js/ts are always excluded.
     "ignoreDirsOnIndexing": null,
 
-    // Ghost hints after the closers of long blocks and elements:
-    // {{/if}} shows its condition, </div> its id/classes.
-    "closingTagHints": true
+    // Ghost hints with the opening condition after the {{/block}} and
+    // {{else}} of long Blaze blocks.
+    "closingTagHints": true,
+
+    // Ghost hints with the id/classes after the closing tag of long
+    // HTML elements (</div> gets « .toolbar). Off by default.
+    "htmlClosingTagHints": false
 }
 ```
 
@@ -161,7 +165,8 @@ channel. Leave it `"off"` normally - it is noisy.
         "additionalArgs": null,
         "meteorPackageDirs": null,
         "ignoreDirsOnIndexing": "private:public",
-        "closingTagHints": true
+        "closingTagHints": true,
+        "htmlClosingTagHints": false
     },
     "[spacebars]": {
         "editor.formatOnSave": true,

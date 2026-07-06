@@ -16,10 +16,19 @@ const decorationType = () =>
         rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
     });
 
-const hintsEnabled = () =>
-    vscode.workspace
-        .getConfiguration()
-        .get("conf.settingsEditor.meteorImpact.closingTagHints") !== false;
+// Blaze block hints are on by default; HTML element hints are noisier
+// and opt-in.
+const hintSettings = () => {
+    const config =
+        vscode.workspace
+            .getConfiguration()
+            .get("conf.settingsEditor.meteorImpact") || {};
+
+    return {
+        blocks: config.closingTagHints !== false,
+        htmlElements: config.htmlClosingTagHints === true,
+    };
+};
 
 const registerClosingTagHints = () => {
     const decoration = decorationType();
@@ -28,7 +37,8 @@ const registerClosingTagHints = () => {
     const refresh = (editor) => {
         if (!editor || editor.document.languageId !== "spacebars") return;
 
-        if (!hintsEnabled()) {
+        const { blocks, htmlElements } = hintSettings();
+        if (!blocks && !htmlElements) {
             editor.setDecorations(decoration, []);
             return;
         }
@@ -36,7 +46,10 @@ const registerClosingTagHints = () => {
         const document = editor.document;
         let hints;
         try {
-            hints = computeClosingTagHints(document.getText());
+            hints = computeClosingTagHints(document.getText(), {
+                blocks,
+                htmlElements,
+            });
         } catch (e) {
             return;
         }

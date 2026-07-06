@@ -51,8 +51,9 @@ Works in `.js`, `.ts` and Spacebars `.html` files:
     block indentation). Helper hovers include the JSDoc written above the
     definition.
 -   **Closing-tag hints**: long blocks show their opening condition as a
-    ghost hint at `{{/if}}`/`{{else}}` (`« if isSavingState`), and long
-    HTML elements show their id/classes at the closing tag (`« .toolbar`).
+    ghost hint at `{{/if}}`/`{{else}}` (`« if isSavingState`). Long HTML
+    elements can also show their id/classes at the closing tag
+    (`« .toolbar`) - opt-in via the `htmlClosingTagHints` setting.
 -   **Method/publication safety**: calls to unknown methods or
     subscriptions to unknown publications are flagged, with quick fixes to
     create the stub; unused methods/publications are hinted.
@@ -129,7 +130,9 @@ editing, string completions and semantic colors.
 
 -   `ignoreDirsOnIndexing` -> List of directories to ignore when the Meteor Language Server is indexing the project.
 
--   `closingTagHints` -> Show ghost hints after the closers of long blocks and elements (`{{/if}}` gets its condition, `</div>` its id/classes). Enabled by default.
+-   `closingTagHints` -> Show ghost hints with the opening condition after the `{{/block}}` and `{{else}}` of long Blaze blocks. Enabled by default.
+
+-   `htmlClosingTagHints` -> Show ghost hints with the id/classes after the closing tag of long HTML elements (`</div>` gets `« .toolbar`). Disabled by default.
 
 ## Credits
 

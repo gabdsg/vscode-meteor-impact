@@ -204,6 +204,27 @@ describe("Closing tag hints", () => {
         assert.deepStrictEqual(hintTexts(anonymous), []);
     });
 
+    it("filters block and element hints independently via options", () => {
+        const content = [
+            '<div class="toolbar">',
+            "{{#if ready}}",
+            "<b>1</b>",
+            "<b>2</b>",
+            "<b>3</b>",
+            "<b>4</b>",
+            "{{/if}}",
+            "</div>",
+        ].join("\n");
+
+        assert.deepStrictEqual(hintTexts(content), ["if ready", ".toolbar"]);
+        assert.deepStrictEqual(hintTexts(content, { htmlElements: false }), [
+            "if ready",
+        ]);
+        assert.deepStrictEqual(hintTexts(content, { blocks: false }), [
+            ".toolbar",
+        ]);
+    });
+
     it("strips mustaches from hinted class values", () => {
         const content = [
             '<div class="panes {{#if showPreview}}with-preview{{/if}}">',

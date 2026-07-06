@@ -108,13 +108,13 @@ const elementHints = (content, minLines) => {
 
 const computeClosingTagHints = (
     content,
-    { minLines = MIN_SPANNED_LINES } = {}
+    { minLines = MIN_SPANNED_LINES, blocks = true, htmlElements = true } = {}
 ) => {
     const { blankHtmlComments } = require("../server/src/text-utils");
 
     return [
-        ...blockHints(blankHtmlComments(content), minLines),
-        ...elementHints(content, minLines),
+        ...(blocks ? blockHints(blankHtmlComments(content), minLines) : []),
+        ...(htmlElements ? elementHints(content, minLines) : []),
     ].sort((a, b) => a.offset - b.offset);
 };
 
