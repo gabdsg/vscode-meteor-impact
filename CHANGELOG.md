@@ -4,7 +4,34 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [2.0.2] - 2026-07-06
+
+Second dogfooding round: a file-corrupting formatter bug and new
+template-editing comforts. **Update as soon as possible**: 2.0.1 and
+older can mangle a file when formatting with unsaved changes.
+
+### Fixed
+
+-   **The language server read stale disk content instead of the open
+    buffer**: `TextDocuments.get` is keyed by the URI string but was
+    called with a URI object, so every provider silently worked from the
+    last saved file. Worst case was formatting: edits computed against
+    stale disk text were applied to the live buffer, splicing duplicated
+    fragments into the document and losing the unsaved changes
+    (real-world file corruption).
+-   Formatting refuses to produce edits when the document has no synced
+    buffer, so format edits can never again be computed from disk
+    content.
+-   Formatting skips Blaze files that don't parse (e.g. a stray
+    `</template>`), keeping the parse error visible instead of
+    re-indenting broken markup. Non-Blaze HTML pages still format.
+-   Fix an indexing error on `Template.hasOwnProperty(...)` and other
+    `Object.prototype` method calls on `Template` (seen in
+    `aldeed:template-extension`): the property name was mistaken for a
+    template reference and the inherited function crashed the scan of
+    that file.
+
+### Added
 
 -   **Closing-tag hints**: long `{{#block}}`s show their opening condition
     as a ghost hint at `{{/block}}` and `{{else}}` (`« if isSavingState`),
@@ -15,25 +42,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
     offered.
 -   **JSDoc in hovers**: the `/** ... */` block above a template or
     global helper definition now shows in its hover card.
--   **Fix the language server reading stale disk content instead of the
-    open buffer**: `TextDocuments.get` is keyed by the URI string but was
-    called with a URI object, so every provider silently worked from the
-    last saved file. Worst case was formatting: edits computed against
-    stale disk text were applied to the live buffer, splicing duplicated
-    fragments into the document (real-world file corruption).
--   Formatting now refuses to produce edits when the document has no
-    synced buffer, so format edits can never again be computed from disk
-    content.
--   Formatting also skips Blaze files that don't parse (e.g. a stray
-    `</template>`), keeping the parse error visible instead of
-    re-indenting broken markup. Non-Blaze HTML pages still format.
--   The language server logs its version on startup, so stale-build
-    sessions are easy to spot.
--   Fix an indexing error on `Template.hasOwnProperty(...)` and other
-    `Object.prototype` method calls on `Template` (seen in
-    `aldeed:template-extension`): the property name was mistaken for a
-    template reference and the inherited function crashed the scan of
-    that file.
+-   The language server logs its version on startup
+    (`* Meteor Impact language server 2.0.2`), so stale-build sessions
+    are easy to spot.
 
 ## [2.0.1] - 2026-07-06
 

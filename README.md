@@ -30,7 +30,9 @@ Works in `.js`, `.ts` and Spacebars `.html` files:
 -   **Completions**: template-scoped and global helpers inside mustaches,
     template names after `{{>`, block variables (`{{#each x in ...}}`,
     `{{#let}}`), `Meteor.call`/`callAsync`/`subscribe` names, event selector
-    classes/ids, plus full HTML completion and Emmet in templates.
+    classes/ids, CSS classes/ids from same-directory style files inside
+    `class="..."`/`id="..."`, plus full HTML completion and Emmet in
+    templates.
 -   **Go to definition / references**: helpers, templates, methods,
     publications, event handlers (including event key -> targeted HTML
     element and class token -> event handlers), from both HTML and JS/TS.
@@ -46,7 +48,11 @@ Works in `.js`, `.ts` and Spacebars `.html` files:
     and block variables get distinct colors.
 -   **Hover, signature help, outline/breadcrumbs, workspace symbol search,
     folding, linked tag editing and Spacebars formatting** (with mustache
-    block indentation).
+    block indentation). Helper hovers include the JSDoc written above the
+    definition.
+-   **Closing-tag hints**: long blocks show their opening condition as a
+    ghost hint at `{{/if}}`/`{{else}}` (`« if isSavingState`), and long
+    HTML elements show their id/classes at the closing tag (`« .toolbar`).
 -   **Method/publication safety**: calls to unknown methods or
     subscriptions to unknown publications are flagged, with quick fixes to
     create the stub; unused methods/publications are hinted.
@@ -122,6 +128,8 @@ editing, string completions and semantic colors.
 -   `meteorPackageDirs` -> Use a custom packages diretory.
 
 -   `ignoreDirsOnIndexing` -> List of directories to ignore when the Meteor Language Server is indexing the project.
+
+-   `closingTagHints` -> Show ghost hints after the closers of long blocks and elements (`{{/if}}` gets its condition, `</div>` its id/classes). Enabled by default.
 
 ## Credits
 

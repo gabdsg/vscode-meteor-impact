@@ -28,7 +28,11 @@ All of Meteor Impact's own options live under a single object:
     // Colon-delimited list of directories the language server should NOT
     // index, relative to the workspace. tests/, node_modules/ and
     // *.tests.js/ts are always excluded.
-    "ignoreDirsOnIndexing": null
+    "ignoreDirsOnIndexing": null,
+
+    // Ghost hints after the closers of long blocks and elements:
+    // {{/if}} shows its condition, </div> its id/classes.
+    "closingTagHints": true
 }
 ```
 
@@ -156,7 +160,8 @@ channel. Leave it `"off"` normally - it is noisy.
         "port": "3000",
         "additionalArgs": null,
         "meteorPackageDirs": null,
-        "ignoreDirsOnIndexing": "private:public"
+        "ignoreDirsOnIndexing": "private:public",
+        "closingTagHints": true
     },
     "[spacebars]": {
         "editor.formatOnSave": true,

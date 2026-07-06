@@ -5,16 +5,29 @@ publishes to the VS Code Marketplace and Open VSX. This is the checklist.
 
 ## 1. Prepare the release
 
-1. Update `CHANGELOG.md`: add a `## [X.Y.Z] - YYYY-MM-DD` section at the
-   top describing what changed. The marketplace shows this file in the
+1. Verify the build you are about to ship:
+
+    ```bash
+    npm run test:server
+    ```
+
+    Then dogfood in the Extension Development Host (F5). The server
+    logs `* Meteor Impact language server X.Y.Z` as its first output
+    line - **if the banner is missing or shows an old version, you are
+    testing a stale build**, not your working tree. Relaunch the dev
+    host after any server change; a host started earlier keeps running
+    the old code.
+2. Update `CHANGELOG.md`: rename the `## [Unreleased]` section to
+   `## [X.Y.Z] - YYYY-MM-DD` (between releases, changes accumulate
+   under `[Unreleased]`). The marketplace shows this file in the
    listing's Changelog tab.
-2. Bump the version in `package.json` (keep `package-lock.json` in sync):
+3. Bump the version in `package.json` (keep `package-lock.json` in sync):
 
     ```bash
     npm version X.Y.Z --no-git-tag-version
     ```
 
-3. Commit and push to `main`:
+4. Commit and push to `main`:
 
     ```bash
     git add package.json package-lock.json CHANGELOG.md
@@ -22,7 +35,7 @@ publishes to the VS Code Marketplace and Open VSX. This is the checklist.
     git push origin main
     ```
 
-4. Wait for the CI run on `main` to go green (lint, unit tests with the
+5. Wait for the CI run on `main` to go green (lint, unit tests with the
    coverage gate, vsce package, VS Code integration test).
 
 ## 2. Tag it
@@ -63,6 +76,11 @@ only triggers the workflow, so keep them matching.
 -   Marketplace: <https://marketplace.visualstudio.com/items?itemName=gabdsg.meteor-impact>
     (validation can take a few minutes after the job finishes).
 -   Open VSX: <https://open-vsx.org/extension/gabdsg/meteor-impact>
+-   Update the installed extension (`code --list-extensions
+    --show-versions | grep meteor-impact`) and open a Meteor project:
+    the Output panel ("Meteor Impact Language Server") must start with
+    the new version banner. Until the update lands, the old installed
+    build keeps running with its old bugs - don't dogfood fixes there.
 
 ## Secrets
 
