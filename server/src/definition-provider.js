@@ -437,6 +437,26 @@ class DefinitionProvider extends ServerBase {
 
         const { start, end, uri: helperUri } = helper || {};
         if (!start || !end) {
+            // Not a helper: jump to the inclusion sites passing it as data
+            // ({{> template name=...}}).
+            const dataParams =
+                !!templateName &&
+                this.indexer.blazeIndexer.getDataParams(templateName, symbol);
+            if (dataParams?.length) {
+                const { Location, Range } = require("vscode-languageserver");
+                return dataParams.map(({ uri: paramUri, loc }) =>
+                    Location.create(
+                        paramUri.fsPath,
+                        Range.create(
+                            loc.start.line - 1,
+                            loc.start.column,
+                            loc.end.line - 1,
+                            loc.end.column
+                        )
+                    )
+                );
+            }
+
             console.warn(
                 `Didn't found helper for symbol ${JSON.stringify(
                     symbol,

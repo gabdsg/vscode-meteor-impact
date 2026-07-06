@@ -15,6 +15,9 @@ class BlazeIndexer {
         // Template name -> selector (".class" / "#id") -> locations of the
         // class/id tokens in the template HTML.
         this.templateSelectorsMap = {};
+        // Template name -> argument name -> the inclusion sites passing it
+        // ({{> item title="hello"}}): inside "item", {{title}} is data.
+        this.templateDataParams = {};
     }
 
     /**
@@ -174,6 +177,46 @@ class BlazeIndexer {
     }
 
     /**
+     * Record the arguments passed at an inclusion site: after
+     * {{> item title="hello"}}, {{title}} inside "item" resolves from the
+     * caller's data context, not from a helper.
+     */
+    indexDataParams({ node, uri }) {
+        const templateName = node.name?.original;
+        const pairs = node.hash?.pairs;
+        if (
+            typeof templateName !== "string" ||
+            !templateName ||
+            templateName in Object.prototype ||
+            !Array.isArray(pairs)
+        ) {
+            return;
+        }
+
+        const params = (this.templateDataParams[templateName] =
+            this.templateDataParams[templateName] || {});
+
+        for (const pair of pairs) {
+            const key = pair?.key;
+            if (
+                typeof key !== "string" ||
+                !key ||
+                key in Object.prototype ||
+                !pair.loc
+            ) {
+                continue;
+            }
+
+            const { start } = pair.loc;
+            const entryKey = `${uri.fsPath}${start.line}${start.column}`;
+            const entries = (params[key] = params[key] || []);
+            if (entries.some(({ entryKey: e }) => e === entryKey)) continue;
+
+            entries.push({ loc: pair.loc, uri, entryKey });
+        }
+    }
+
+    /**
      * Track every Template.X / Template["x-y"] member access in JS/TS, so
      * that renaming a template can update its JS references too.
      */
@@ -309,6 +352,7 @@ class BlazeIndexer {
 
         // Index template tags usage {{> templateName}}
         if (type === NODE_TYPES.PARTIAL_STATEMENT && name) {
+            this.indexDataParams({ node, uri });
             return this.addUsage({ node: name, uri, key: name.original });
         }
 
@@ -413,6 +457,17 @@ class BlazeIndexer {
 
     getGlobalHelper(helper) {
         return this.globalHelpersMap[this.getHelperName(helper)];
+    }
+
+    /**
+     * Inclusion-site entries passing `name` as data to `templateName`
+     * ({{> templateName name=...}}), or undefined. Array.isArray keeps
+     * Object.prototype names from resolving.
+     */
+    getDataParams(templateName, name) {
+        const entries =
+            this.templateDataParams[templateName]?.[this.getHelperName(name)];
+        return Array.isArray(entries) ? entries : undefined;
     }
 
     getEventLocations(eventKey) {
@@ -550,6 +605,24 @@ class BlazeIndexer {
                 delete this.templateSelectorsMap[templateName];
             }
         }
+
+        for (const [templateName, params] of Object.entries(
+            this.templateDataParams
+        )) {
+            for (const [param, entries] of Object.entries(params)) {
+                const remaining = entries.filter(({ uri }) => !matches(uri));
+
+                if (!remaining.length) {
+                    delete params[param];
+                } else if (remaining.length !== entries.length) {
+                    params[param] = remaining;
+                }
+            }
+
+            if (!Object.keys(params).length) {
+                delete this.templateDataParams[templateName];
+            }
+        }
     }
 
     reset() {
@@ -559,6 +632,7 @@ class BlazeIndexer {
         this.eventsMap = {};
         this.templateJsReferences = {};
         this.templateSelectorsMap = {};
+        this.templateDataParams = {};
     }
 }
 

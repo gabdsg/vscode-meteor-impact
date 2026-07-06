@@ -4,6 +4,15 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.0.4]
+
+-   **Inclusion arguments resolve as data**: after `{{> item title="hello"}}`,
+    `{{title}}` inside `item` is no longer an unknown name - it completes
+    ("Data passed by callers"), hovers with the passing inclusion site,
+    go-to-definition jumps to every caller that passes it, it colors like
+    a bound variable, and calls like `{{formatter x}}` where `formatter`
+    is passed by a caller are not flagged as unresolved helpers.
+
 ## [2.0.3]
 
 -   Closing-tag hints are now two independent settings:

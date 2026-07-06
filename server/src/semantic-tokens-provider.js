@@ -121,7 +121,22 @@ class SemanticTokensProvider extends ServerBase {
                     ]) ||
                 !!globalHelpersMap[head];
             if (isHelper) {
-                pushToken(path.loc, head.length, TOKEN_TYPE_INDEX.helper);
+                return pushToken(
+                    path.loc,
+                    head.length,
+                    TOKEN_TYPE_INDEX.helper
+                );
+            }
+
+            // Data passed at inclusion sites colors like a bound variable.
+            if (
+                !!wrappingTemplateName &&
+                this.indexer.blazeIndexer.getDataParams(
+                    wrappingTemplateName,
+                    head
+                )
+            ) {
+                pushToken(path.loc, head.length, TOKEN_TYPE_INDEX.variable);
             }
         };
 

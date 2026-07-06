@@ -150,6 +150,22 @@ class HoverProvider extends ServerBase {
             });
         }
 
+        // Not a helper: data passed at the inclusion sites
+        // ({{> template helperName=...}}).
+        const dataParams =
+            !!templateName &&
+            blazeIndexer.getDataParams(templateName, helperName);
+        if (dataParams?.length) {
+            return this.createHover({
+                name: helperName,
+                subtitle: `data passed to template \`${templateName}\` (${
+                    dataParams.length
+                } caller${dataParams.length > 1 ? "s" : ""})`,
+                defUri: dataParams[0].uri,
+                defLine: dataParams[0].loc.start.line,
+            });
+        }
+
         return;
     }
 

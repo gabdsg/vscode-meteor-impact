@@ -258,9 +258,15 @@ class DiagnosticsProvider extends ServerBase {
                 const isResolvable =
                     isBlockVariable ||
                     (!!wrappingTemplateName &&
-                        !!templateIndexMap[wrappingTemplateName]?.helpers?.[
+                        (!!templateIndexMap[wrappingTemplateName]?.helpers?.[
                             helperName
-                        ]) ||
+                        ] ||
+                            // Data passed at inclusion sites:
+                            // {{> template helperName=...}}.
+                            !!this.indexer.blazeIndexer.getDataParams(
+                                wrappingTemplateName,
+                                helperName
+                            ))) ||
                     !!globalHelpersMap[helperName] ||
                     !!this.indexer.packagesIndexer?.globalHelpers[helperName];
                 if (isResolvable) return;

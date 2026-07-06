@@ -7,7 +7,7 @@
  */
 
 // Bump when the shape of the index maps changes.
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 
 const cacheFilePath = (rootUri) => {
     const crypto = require("crypto");
@@ -65,6 +65,7 @@ const saveIndexCache = async (indexer, uris) => {
             eventsMap,
             templateJsReferences,
             templateSelectorsMap,
+            templateDataParams,
         } = indexer.blazeIndexer;
         const { methodsMap, publicationsMap, usageMap } =
             indexer.methodsAndPublicationsIndexer;
@@ -79,6 +80,7 @@ const saveIndexCache = async (indexer, uris) => {
                 eventsMap,
                 templateJsReferences,
                 templateSelectorsMap,
+                templateDataParams,
             },
             methods: { methodsMap, publicationsMap, usageMap },
         };

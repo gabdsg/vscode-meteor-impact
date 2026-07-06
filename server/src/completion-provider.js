@@ -324,6 +324,17 @@ class CompletionProvider extends ServerBase {
                 kind: CompletionItemKind.Function,
                 detail: `Helper of template "${templateName}"`,
             })),
+            ...Object.keys(
+                (!!templateName &&
+                    this.indexer.blazeIndexer.templateDataParams[
+                        templateName
+                    ]) ||
+                    {}
+            ).map((paramName) => ({
+                ...CompletionItem.create(paramName),
+                kind: CompletionItemKind.Field,
+                detail: `Data passed to "${templateName}" by its callers`,
+            })),
             ...Object.keys(this.indexer.blazeIndexer.globalHelpersMap).map(
                 (helperName) => ({
                     ...CompletionItem.create(helperName),
