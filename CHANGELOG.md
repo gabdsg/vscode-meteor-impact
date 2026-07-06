@@ -6,6 +6,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [2.0.4]
 
+-   The activity bar icon is a proper monochrome flame silhouette
+    instead of a solid circle (the old color PNG's opaque disc was
+    swallowed whole by VS Code's icon masking).
 -   **Inclusion arguments resolve as data**: after `{{> item title="hello"}}`,
     `{{title}}` inside `item` is no longer an unknown name - it completes
     ("Data passed by callers"), hovers with the passing inclusion site,
