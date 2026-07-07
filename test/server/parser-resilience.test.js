@@ -4,6 +4,8 @@ const {
     loadFixtureIndexer,
     fixtureUri,
     overrideContent,
+    serverInstanceMock,
+    documentsInstanceMock,
 } = require("./test-utils");
 
 // Real-world file shapes reported from a large Meteor app: mustaches
@@ -94,6 +96,57 @@ describe("Indexer resilience on real-world projects", () => {
                 fsPath.includes("node_modules")
             )
         );
+    });
+
+    const createProvider = (ProviderClass) =>
+        new ProviderClass(
+            serverInstanceMock,
+            documentsInstanceMock,
+            `file://${__dirname}`,
+            indexer
+        );
+
+    it("definition request degrades quietly on a file the mustache parser rejects", () => {
+        // loose.html indexes (htmlJs-only) but has no mustache AST: the
+        // request returns nothing instead of failing with a parse error.
+        const { DefinitionProvider } = require("../../server/src/definition-provider");
+        const definition = createProvider(DefinitionProvider).onDefinitionRequest({
+            position: { line: 1, character: 31 },
+            textDocument: {
+                uri: fixtureUri("resilient-project", "client/loose.html"),
+            },
+        });
+        assert.strictEqual(definition, undefined);
+    });
+
+    it("hover falls back to HTML tag docs on a file the mustache parser rejects", () => {
+        const { HoverProvider } = require("../../server/src/hover-provider");
+
+        // Position on the <div> tag of loose.html.
+        const hover = createProvider(HoverProvider).onHoverRequest({
+            position: { line: 1, character: 6 },
+            textDocument: {
+                uri: fixtureUri("resilient-project", "client/loose.html"),
+            },
+        });
+        assert.ok(hover, "Expected the embedded HTML hover fallback");
+        assert.ok(JSON.stringify(hover.contents).includes("div"));
+    });
+
+    it("resolves a partial inside a file whose htmlJs is a single node", () => {
+        // solo.html has exactly one top-level tag and no trailing newline:
+        // SpacebarsCompiler.parse returns a single node, not an array.
+        const { DefinitionProvider } = require("../../server/src/definition-provider");
+
+        // Position on "dynamic" in {{> dynamic}}.
+        const definition = createProvider(DefinitionProvider).onDefinitionRequest({
+            position: { line: 0, character: 33 },
+            textDocument: {
+                uri: fixtureUri("resilient-project", "client/solo.html"),
+            },
+        });
+        assert.ok(definition, "Expected a definition location");
+        assert.ok(definition.uri.endsWith("dynamic.js"));
     });
 
     it("treats a file turning non-Blaze as a removal on reindex", () => {

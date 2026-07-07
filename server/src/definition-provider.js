@@ -137,11 +137,9 @@ class DefinitionProvider extends ServerBase {
     }
 
     handleFileSpacebarsHTML({ uri, position }) {
-        const { AstWalker } = require("./ast-helpers");
-        const htmlWalker = new AstWalker(
-            this.getFileContent(uri),
-            require("@handlebars/parser").parse
-        );
+        const htmlWalker = this.createHtmlWalker(this.getFileContent(uri));
+        if (!htmlWalker) return;
+
         const htmlSymbol = htmlWalker.getSymbolAtPosition(position);
 
         if (!htmlSymbol) {
@@ -203,11 +201,14 @@ class DefinitionProvider extends ServerBase {
                 : templateNameOrNode.name.original;
 
         const { TAG_NAMES } = require("./constants");
+        // SpacebarsCompiler.parse returns a single node (not an array)
+        // when the file has exactly one top-level tag.
+        const topLevelNodes = Array.isArray(htmlJs) ? htmlJs : [htmlJs];
         // Was the template referenced declared on the same HTML file?
-        return htmlJs.find(
+        return topLevelNodes.find(
             (tag) =>
                 tag.tagName === TAG_NAMES.TEMPLATE &&
-                tag.attrs.name === _searchValue
+                tag.attrs?.name === _searchValue
         );
     }
 

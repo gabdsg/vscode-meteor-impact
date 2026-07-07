@@ -110,17 +110,15 @@ class RenameProvider extends ServerBase {
     }
 
     resolveHtmlTarget({ uri, position }) {
-        const { AstWalker, NODE_TYPES } = require("./ast-helpers");
+        const { NODE_TYPES } = require("./ast-helpers");
 
         const content = this.getFileContent(uri);
 
         const tagTarget = this.resolveTemplateTagTarget({ content, position });
         if (tagTarget) return tagTarget;
 
-        const htmlWalker = new AstWalker(
-            content,
-            require("@handlebars/parser").parse
-        );
+        const htmlWalker = this.createHtmlWalker(content);
+        if (!htmlWalker) return;
 
         const symbol = htmlWalker.getSymbolAtPosition(position);
         if (!symbol) return;

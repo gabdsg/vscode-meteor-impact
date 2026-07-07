@@ -65,6 +65,27 @@ class ServerBase {
         );
     }
 
+    /**
+     * Fresh mustache AST for provider requests. Spacebars accepts content
+     * the mustache parser rejects (stray braces after a mustache) and
+     * Meteor ignores mustaches inside HTML comments, so comments are
+     * blanked (offsets preserved) and parse failures return null for the
+     * caller to degrade gracefully instead of failing the whole request.
+     */
+    createHtmlWalker(content) {
+        const { AstWalker } = require("./ast-helpers");
+        const { blankHtmlComments } = require("./text-utils");
+
+        try {
+            return new AstWalker(
+                blankHtmlComments(content),
+                require("@handlebars/parser").parse
+            );
+        } catch (e) {
+            return null;
+        }
+    }
+
     getFileContent(_uri, range) {
         if (!this.serverInstance) {
             throw new Error("Server instance is required to get file content");

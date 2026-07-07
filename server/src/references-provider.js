@@ -75,18 +75,13 @@ class ReferencesProvider extends ServerBase {
     }
 
     handleHtmlReferences({ position, uri, context }) {
-        const { AstWalker, NODE_TYPES } = require("./ast-helpers");
+        const { NODE_TYPES } = require("./ast-helpers");
 
         const content = this.getFileContent(uri);
 
-        let htmlWalker;
-        try {
-            htmlWalker = new AstWalker(
-                content,
-                require("@handlebars/parser").parse
-            );
-        } catch (e) {
-            console.warn(`Not able to parse ${uri} for references. ${e}`);
+        const htmlWalker = this.createHtmlWalker(content);
+        if (!htmlWalker) {
+            console.warn(`Not able to parse ${uri} for references.`);
             return;
         }
 

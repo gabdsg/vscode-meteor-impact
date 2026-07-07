@@ -14,18 +14,11 @@ class InlayHintsProvider extends ServerBase {
         try {
             if (!this.isFileSpacebarsHTML(uri)) return [];
 
-            const { AstWalker, NODE_TYPES } = require("./ast-helpers");
+            const { NODE_TYPES } = require("./ast-helpers");
 
             const content = this.getFileContent(uri);
-            let htmlWalker;
-            try {
-                htmlWalker = new AstWalker(
-                    content,
-                    require("@handlebars/parser").parse
-                );
-            } catch (e) {
-                return [];
-            }
+            const htmlWalker = this.createHtmlWalker(content);
+            if (!htmlWalker) return [];
 
             const {
                 positionToOffset,

@@ -63,13 +63,8 @@ class HoverProvider extends ServerBase {
     }
 
     handleHtmlHover({ uri, position }) {
-        const { AstWalker } = require("./ast-helpers");
-
         const content = this.getFileContent(uri);
-        const htmlWalker = new AstWalker(
-            content,
-            require("@handlebars/parser").parse
-        );
+        const htmlWalker = this.createHtmlWalker(content);
 
         // Outside Blaze symbols, fall back to the embedded HTML language
         // service (tag/attribute documentation).
@@ -79,6 +74,8 @@ class HoverProvider extends ServerBase {
                 content,
                 position
             );
+
+        if (!htmlWalker) return htmlHoverFallback();
 
         const symbol = htmlWalker.getSymbolAtPosition(position);
         if (!symbol) return htmlHoverFallback();

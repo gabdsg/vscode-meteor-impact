@@ -30,19 +30,10 @@ class SemanticTokensProvider extends ServerBase {
         try {
             if (!this.isFileSpacebarsHTML(uri)) return empty;
 
-            const { AstWalker } = require("./ast-helpers");
-
             const content = this.getFileContent(uri);
-            let htmlWalker;
-            try {
-                htmlWalker = new AstWalker(
-                    content,
-                    require("@handlebars/parser").parse
-                );
-            } catch (e) {
-                // Broken while typing: keep the previous tokens' colors.
-                return empty;
-            }
+            const htmlWalker = this.createHtmlWalker(content);
+            // Broken while typing: keep the previous tokens' colors.
+            if (!htmlWalker) return empty;
 
             const tokens = this.collectTokens({ content, htmlWalker });
 
