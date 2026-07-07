@@ -16,26 +16,38 @@ class AstWalker {
         const position = createPositionObject(_position);
 
         let symbol;
+        let wrappingPartial;
         this.walkUntil((node) => {
             if (node.loc && this.isSymbolInPositionRange(position, node.loc)) {
+                // Children are visited after their parents, so the
+                // innermost matching node wins.
                 symbol = node;
 
-                // If we don't stop here if we found a path expression, we will end getting
-                // the expression that was used on the path expression, which is not a
-                // partial statement.
                 if (node.type === NODE_TYPES.PARTIAL_STATEMENT) {
-                    this.stopWalking();
+                    wrappingPartial = node;
                 }
             }
         });
+
+        // A position on an inclusion or on its template name resolves to
+        // the inclusion itself (otherwise the name's path expression would
+        // shadow it and read as a helper). Params and hash values keep
+        // their own nodes, so helper=someHelper resolves to the helper.
+        if (
+            wrappingPartial &&
+            (symbol === wrappingPartial || symbol === wrappingPartial.name)
+        ) {
+            return wrappingPartial;
+        }
 
         return symbol;
     }
 
     isSymbolInPositionRange({ line, column }, { start, end }) {
-        const containsInLine = line === start.line && line === end.line;
-        const containsInColumn = column >= start.column && column <= end.column;
-        return containsInLine && containsInColumn;
+        if (line < start.line || line > end.line) return false;
+        if (line === start.line && column < start.column) return false;
+        if (line === end.line && column > end.column) return false;
+        return true;
     }
 
     _walk(node, callback) {

@@ -170,7 +170,8 @@ class Indexer extends ServerBase {
         const { AstWalker, parseJsSource } = require("./ast-helpers");
         const { SpacebarsCompiler } = require("@blastjs/spacebars-compiler");
         const { parse: handlebarsParser } = require("@handlebars/parser");
-        const { blankHtmlComments } = require("./text-utils");
+        const { blankHtmlComments, blankStrayBraces } =
+            require("./text-utils");
 
         const extension = this.getFileExtension(uri);
         const isFileHtml = this.isFileSpacebarsHTML(uri);
@@ -206,7 +207,7 @@ class Indexer extends ServerBase {
         let astWalker;
         try {
             astWalker = new AstWalker(
-                blankHtmlComments(fileContent),
+                blankStrayBraces(blankHtmlComments(fileContent)),
                 handlebarsParser,
                 {}
             );

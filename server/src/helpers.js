@@ -74,11 +74,12 @@ class ServerBase {
      */
     createHtmlWalker(content) {
         const { AstWalker } = require("./ast-helpers");
-        const { blankHtmlComments } = require("./text-utils");
+        const { blankHtmlComments, blankStrayBraces } =
+            require("./text-utils");
 
         try {
             return new AstWalker(
-                blankHtmlComments(content),
+                blankStrayBraces(blankHtmlComments(content)),
                 require("@handlebars/parser").parse
             );
         } catch (e) {

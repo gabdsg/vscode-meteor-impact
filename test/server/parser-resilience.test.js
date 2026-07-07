@@ -47,7 +47,7 @@ describe("Indexer resilience on real-world projects", () => {
         assert.ok(!sourcePaths.some((p) => p.endsWith("report.html")));
     });
 
-    it("degrades to Spacebars-only indexing when the mustache parser rejects a file Meteor accepts", () => {
+    it("keeps stray-brace files free of parse errors", () => {
         // loose.html has a stray brace after {{cardId}} - Spacebars (and
         // the Meteor build) accept it, so it must not be flagged as a
         // parse error and the file stays available to providers.
@@ -98,20 +98,32 @@ describe("Indexer resilience on real-world projects", () => {
         );
     });
 
-    const createProvider = (ProviderClass) =>
+    const createProvider = (ProviderClass, documentsInstance) =>
         new ProviderClass(
             serverInstanceMock,
-            documentsInstanceMock,
+            documentsInstance || documentsInstanceMock,
             `file://${__dirname}`,
             indexer
         );
 
-    it("definition request degrades quietly on a file the mustache parser rejects", () => {
-        // loose.html indexes (htmlJs-only) but has no mustache AST: the
-        // request returns nothing instead of failing with a parse error.
+    // Simulates an open buffer mid-typing: valid HTML, unclosed mustache.
+    const brokenBufferDocs = {
+        get: (key) =>
+            key.endsWith("loose.html")
+                ? {
+                      getText: () =>
+                          '<template name="loose"><div>{{</div></template>',
+                  }
+                : undefined,
+    };
+
+    it("definition request degrades quietly when the buffer does not parse", () => {
         const { DefinitionProvider } = require("../../server/src/definition-provider");
-        const definition = createProvider(DefinitionProvider).onDefinitionRequest({
-            position: { line: 1, character: 31 },
+        const definition = createProvider(
+            DefinitionProvider,
+            brokenBufferDocs
+        ).onDefinitionRequest({
+            position: { line: 0, character: 26 },
             textDocument: {
                 uri: fixtureUri("resilient-project", "client/loose.html"),
             },
@@ -119,18 +131,48 @@ describe("Indexer resilience on real-world projects", () => {
         assert.strictEqual(definition, undefined);
     });
 
-    it("hover falls back to HTML tag docs on a file the mustache parser rejects", () => {
+    it("hover falls back to HTML tag docs when the buffer does not parse", () => {
         const { HoverProvider } = require("../../server/src/hover-provider");
 
-        // Position on the <div> tag of loose.html.
-        const hover = createProvider(HoverProvider).onHoverRequest({
-            position: { line: 1, character: 6 },
+        // Position on the <div> tag.
+        const hover = createProvider(
+            HoverProvider,
+            brokenBufferDocs
+        ).onHoverRequest({
+            position: { line: 0, character: 26 },
             textDocument: {
                 uri: fixtureUri("resilient-project", "client/loose.html"),
             },
         });
         assert.ok(hover, "Expected the embedded HTML hover fallback");
         assert.ok(JSON.stringify(hover.contents).includes("div"));
+    });
+
+    it("indexes templates from files with a stray brace after a mustache", () => {
+        // Spacebars reads {{cardId}}} as a mustache plus a literal "}",
+        // so the template must stay reachable from the whole project:
+        // without it, go-to-definition on {{> loose}} anywhere silently
+        // does nothing.
+        const looseTemplate = indexer.blazeIndexer.templateIndexMap["loose"];
+        assert.ok(
+            looseTemplate?.node,
+            "loose should have its HTML definition indexed"
+        );
+        assert.ok(looseTemplate.uri.fsPath.endsWith("loose.html"));
+    });
+
+    it("navigates to a template defined in a stray-brace file", () => {
+        const { DefinitionProvider } = require("../../server/src/definition-provider");
+
+        // Position on "loose" in {{> loose}} of solo.html.
+        const definition = createProvider(DefinitionProvider).onDefinitionRequest({
+            position: { line: 0, character: 46 },
+            textDocument: {
+                uri: fixtureUri("resilient-project", "client/solo.html"),
+            },
+        });
+        assert.ok(definition, "Expected a definition location");
+        assert.ok(definition.uri.endsWith("loose.js"));
     });
 
     it("resolves a partial inside a file whose htmlJs is a single node", () => {

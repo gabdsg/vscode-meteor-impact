@@ -4,6 +4,28 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.0.7] - 2026-07-07
+
+### Fixed
+
+-   **Templates defined in a file with a stray brace after a mustache
+    were invisible to navigation**: `id="btn-{{cardId}}}"` made the
+    strict mustache parser reject the whole file, so its `<template>`
+    definitions never entered the index - go-to-definition on
+    `{{> thatTemplate}}` from any file silently did nothing (the
+    template still showed in the Meteor Explorer through its
+    code-behind helpers). The stray brace is now blanked the way
+    Spacebars reads it (a mustache plus a literal `}`), so these files
+    index fully: navigation, hover, rename, references and semantic
+    colors all work in and to them.
+-   **Go-to-definition did nothing on multi-line inclusions**
+    (`{{> columnSorting` with one argument per line): the symbol lookup
+    only matched AST nodes that start and end on the same line. A
+    position on the inclusion or its template name now resolves the
+    inclusion across lines - and hash values like `helper=someHelper`
+    keep resolving to the helper itself, on single-line inclusions too
+    (previously they jumped to the included template).
+
 ## [2.0.6] - 2026-07-07
 
 ### Fixed

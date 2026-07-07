@@ -160,6 +160,15 @@ const blankHtmlComments = (content) =>
     );
 
 /**
+ * Blank the stray "}" after a mustache close ({{cardId}}} -> {{cardId}} ),
+ * keeping every offset intact. Spacebars (and the Meteor build) read it as
+ * a mustache plus a literal brace; the strict mustache parser fails the
+ * whole file on it. The lookbehind protects triple-staches ({{{raw}}}).
+ */
+const blankStrayBraces = (content) =>
+    content.replace(/(?<!\{)(\{\{[^{}]*\}\})\}/g, "$1 ");
+
+/**
  * Class and id names mentioned in CSS/LESS content, for completion inside
  * class="..." / id="..." attributes.
  * ponytail: regex over the source, so LESS "&__child" parent selectors
@@ -194,5 +203,6 @@ module.exports = {
     getBlockVariablesAtOffset,
     getBlockRanges,
     blankHtmlComments,
+    blankStrayBraces,
     extractStyleSelectors,
 };

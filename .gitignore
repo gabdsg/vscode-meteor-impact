@@ -1,5 +1,6 @@
 **/node_modules
 *.vsix
+.vscode-test/
 coverage/
 test/integration-workspace/jsconfig.json
 test/integration-workspace/.vscode/
