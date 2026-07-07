@@ -2,7 +2,7 @@
     "name": "meteor-impact",
     "displayName": "Meteor Impact",
     "description": "Full-impact language tooling for Meteor and Blaze: TypeScript-aware indexing, completions, go-to-definition, rename, diagnostics, refactorings and template scaffolding.",
-    "version": "2.0.7",
+    "version": "2.1.0",
     "private": "true",
     "publisher": "gabdsg",
     "license": "MIT",
@@ -80,6 +80,21 @@
                             "htmlClosingTagHints": {
                                 "type": "boolean",
                                 "description": "Show ghost hints with the id/classes after the closing tag of long HTML elements. Off by default."
+                            },
+                            "claudeCodeAutoSend": {
+                                "type": "boolean",
+                                "description": "Submit \"... with Claude Code\" prompts immediately instead of prefilling the terminal input for review. Off by default."
+                            },
+                            "claudeCodeCliPath": {
+                                "type": "string",
+                                "description": "Path to the Claude Code CLI executable used by the \"... with Claude Code\" code actions."
+                            },
+                            "mongoSchemaPath": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "description": "Path to a MongoSchema repository (schemas/<collection>/<collection>.schema.json layout) used for collection field IntelliSense. Relative to the workspace root or absolute. Example: ../MongoSchema"
                             }
                         },
                         "additionalProperties": false,
@@ -90,7 +105,10 @@
                             "meteorPackageDirs": null,
                             "ignoreDirsOnIndexing": null,
                             "closingTagHints": true,
-                            "htmlClosingTagHints": false
+                            "htmlClosingTagHints": false,
+                            "claudeCodeAutoSend": false,
+                            "claudeCodeCliPath": "claude",
+                            "mongoSchemaPath": null
                         }
                     }
                 }

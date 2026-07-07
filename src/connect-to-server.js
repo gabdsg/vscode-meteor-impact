@@ -1,5 +1,6 @@
 let client;
 let extractTemplateCommandDisposable;
+let claudeCodeCommandDisposable;
 let renameTemplateCommandDisposable;
 let explorerDisposables = [];
 let statusBarItem;
@@ -105,6 +106,11 @@ const connectToLanguageServer = async (asAbsolutePath) => {
     // Start the client. This will also launch the server
     await client.start();
     registerExtractTemplateCommand();
+
+    const { registerClaudeCodeCommand } = require("./claude-code");
+    claudeCodeCommandDisposable?.dispose?.();
+    claudeCodeCommandDisposable = registerClaudeCodeCommand();
+
     setupIndexingStatusBar();
 
     const { commands } = require("vscode");
@@ -125,6 +131,8 @@ const connectToLanguageServer = async (asAbsolutePath) => {
 const stopServer = () => {
     extractTemplateCommandDisposable?.dispose?.();
     extractTemplateCommandDisposable = undefined;
+    claudeCodeCommandDisposable?.dispose?.();
+    claudeCodeCommandDisposable = undefined;
     renameTemplateCommandDisposable?.dispose?.();
     renameTemplateCommandDisposable = undefined;
     explorerDisposables.forEach((disposable) => disposable?.dispose?.());

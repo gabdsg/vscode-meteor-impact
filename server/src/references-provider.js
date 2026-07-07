@@ -43,6 +43,9 @@ class ReferencesProvider extends ServerBase {
             this.indexer.methodsAndPublicationsIndexer.getUsageInfo(nodeKey) ||
             this.indexer.blazeIndexer.htmlUsageMap[nodeKey] ||
             this.indexer.blazeIndexer.getEventLocations(nodeKey) ||
+            // Before getTemplateInfo: that returns a (truthy) empty object
+            // for unknown names and would short-circuit the chain.
+            this.indexer.sessionKeysIndexer.getReferences(nodeKey) ||
             this.indexer.blazeIndexer.getTemplateInfo(nodeKey);
 
         if (!Array.isArray(usageInfoArray) || !usageInfoArray.length) {

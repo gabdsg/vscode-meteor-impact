@@ -77,6 +77,40 @@ describe("Index cache (warm start)", () => {
         }
     });
 
+    it("round-trips the session keys maps", async () => {
+        clearCacheFor({
+            rootUri: {
+                fsPath: path.join(
+                    __dirname,
+                    "fixtures",
+                    "session-keys-project"
+                ),
+            },
+        });
+
+        const { indexer: first } = await loadFixtureIndexer(
+            "session-keys-project",
+            { enableIndexCache: true }
+        );
+
+        try {
+            const { indexer: second } = await loadFixtureIndexer(
+                "session-keys-project",
+                { enableIndexCache: true }
+            );
+
+            assert.strictEqual(second.restoredFromCache, true);
+
+            const { keysMap } = second.sessionKeysIndexer;
+            assert.strictEqual(keysMap["counter"].sets.length, 1);
+            assert.ok(
+                keysMap["counter"].sets[0].uri.fsPath.endsWith("state.js")
+            );
+        } finally {
+            clearCacheFor(first);
+        }
+    });
+
     it("falls back to a full parse when a file changed", async () => {
         const { indexer: first, rootPath } = await loadFixtureIndexer(
             "basic-project",

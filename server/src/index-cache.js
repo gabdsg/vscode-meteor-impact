@@ -7,7 +7,7 @@
  */
 
 // Bump when the shape of the index maps changes.
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 
 const cacheFilePath = (rootUri) => {
     const crypto = require("crypto");
@@ -69,6 +69,7 @@ const saveIndexCache = async (indexer, uris) => {
         } = indexer.blazeIndexer;
         const { methodsMap, publicationsMap, usageMap } =
             indexer.methodsAndPublicationsIndexer;
+        const { keysMap, reactiveDictVars } = indexer.sessionKeysIndexer;
 
         const data = {
             version: CACHE_VERSION,
@@ -83,6 +84,13 @@ const saveIndexCache = async (indexer, uris) => {
                 templateDataParams,
             },
             methods: { methodsMap, publicationsMap, usageMap },
+            sessionKeys: { keysMap, reactiveDictVars },
+            // schemasMap is not cached: it belongs to the external
+            // MongoSchema repo and reloads on every start.
+            mongoSchema: {
+                collectionVarsMap:
+                    indexer.mongoSchemaIndexer.collectionVarsMap,
+            },
         };
 
         const filePath = cacheFilePath(indexer.rootUri);
@@ -121,6 +129,14 @@ const loadIndexCache = async (indexer, uris) => {
         Object.assign(
             indexer.methodsAndPublicationsIndexer,
             deepReviveUris(data.methods)
+        );
+        Object.assign(
+            indexer.sessionKeysIndexer,
+            deepReviveUris(data.sessionKeys)
+        );
+        Object.assign(
+            indexer.mongoSchemaIndexer,
+            deepReviveUris(data.mongoSchema)
         );
         return true;
     } catch (e) {

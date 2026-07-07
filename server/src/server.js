@@ -147,7 +147,11 @@ class ServerInstance {
                     linkedEditingRangeProvider: true,
                     renameProvider: { prepareProvider: true },
                     codeActionProvider: {
-                        codeActionKinds: ["quickfix", "refactor.extract"],
+                        codeActionKinds: [
+                            "quickfix",
+                            "refactor.extract",
+                            "refactor.claudeCode",
+                        ],
                     },
                     semanticTokensProvider: {
                         legend: SemanticTokensProvider.legend,

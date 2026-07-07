@@ -36,7 +36,23 @@ All of Meteor Impact's own options live under a single object:
 
     // Ghost hints with the id/classes after the closing tag of long
     // HTML elements (</div> gets « .toolbar). Off by default.
-    "htmlClosingTagHints": false
+    "htmlClosingTagHints": false,
+
+    // Submit "... with Claude Code" prompts immediately instead of
+    // prefilling the terminal input for review. Off by default.
+    "claudeCodeAutoSend": false,
+
+    // Path to the Claude Code CLI executable used by the "... with
+    // Claude Code" code actions.
+    "claudeCodeCliPath": "claude",
+
+    // Path to a MongoSchema repository used for collection field
+    // IntelliSense (completion, hover, typo diagnostics and
+    // go-to-definition inside find/update/insert calls). Relative to
+    // the workspace root or absolute. Expected layout:
+    // schemas/<collection>/<collection>.schema.json with MongoDB
+    // $jsonSchema validators; the collection name is the directory name.
+    "mongoSchemaPath": null
 }
 ```
 
@@ -166,7 +182,10 @@ channel. Leave it `"off"` normally - it is noisy.
         "meteorPackageDirs": null,
         "ignoreDirsOnIndexing": "private:public",
         "closingTagHints": true,
-        "htmlClosingTagHints": false
+        "htmlClosingTagHints": false,
+        "claudeCodeAutoSend": false,
+        "claudeCodeCliPath": "claude",
+        "mongoSchemaPath": "../MongoSchema"
     },
     "[spacebars]": {
         "editor.formatOnSave": true,
