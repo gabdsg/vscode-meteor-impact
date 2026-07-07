@@ -4,6 +4,24 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.0.6] - 2026-07-07
+
+### Fixed
+
+-   **Hover and go-to-definition requests failed with a parse error on
+    files the Meteor build accepts**, e.g. a stray brace right after a
+    mustache (`id="btn-{{cardId}}}"`). The indexer already tolerated
+    these; now every request provider shares the same lenient parse:
+    HTML comments are ignored like Meteor does, and a file the mustache
+    parser rejects degrades gracefully (hover falls back to the
+    built-in HTML tag docs) instead of failing the request. This also
+    un-breaks rename, references, semantic colors and closing-tag hints
+    in files with a commented-out mustache.
+-   **Go-to-definition on a template inclusion crashed with
+    `htmlJs.find is not a function`** in files with exactly one
+    top-level tag (the Spacebars compiler returns a single node instead
+    of an array for those).
+
 ## [2.0.5]
 
 -   The activity bar icon is a monochrome flame over impact ripples
