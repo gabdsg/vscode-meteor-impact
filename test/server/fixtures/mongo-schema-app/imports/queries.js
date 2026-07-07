@@ -1,4 +1,4 @@
-import { Students, Aliased } from "./collections";
+import { Students, Aliased, StudentsRepository } from "./collections";
 
 export const queries = (studentId) => {
     Students.find({ firstName: "Ana", "contacts.relationship": "mother" });
@@ -14,4 +14,8 @@ export const queries = (studentId) => {
     );
     Students.find({ [studentId]: 1 });
     Aliased.find({ styleName: "bold" });
+    // The Repository wrapper: same collection, resolved through the
+    // "name" property of its options object instead of a positional
+    // Mongo.Collection argument.
+    StudentsRepository.find({ firstName: "Ana", repoTypo: 1 });
 };

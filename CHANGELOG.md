@@ -8,6 +8,16 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Added
 
+-   **Meteor package paths land in tsconfig.json too**: TypeScript ignores
+    jsconfig.json for every file a tsconfig.json covers, so TS projects
+    never got the `meteor/*` module mappings (Atmosphere imports like
+    `meteor/quave:testing` were unresolvable in .ts files). When a root
+    tsconfig.json exists, the imported/local package paths are now merged
+    into its `compilerOptions.paths` as well - through a comment- and
+    formatting-preserving JSONC edit that only ever touches `meteor/*`
+    keys, never user-owned ones. The extension still does not create a
+    tsconfig.json: that file is the project's own build config.
+
 -   **"... with Claude Code" code actions**: on a function in a
     server-side JS/TS file (a `server/` path segment, a file defining
     methods/publications, or a `Meteor.isServer` guard), Cmd+. offers
@@ -25,6 +35,13 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
     completion inside the key string, go-to-definition to the first
     `set`, find-all-references across the app, and hint diagnostics for
     keys read-but-never-set or set-but-never-read.
+-   **Collection field IntelliSense recognizes the `Repository` wrapper
+    too**: besides `new Mongo.Collection("name")`, `new Repository({ name:
+    "name", ... })` (this app's data-access wrapper, which creates the
+    Mongo.Collection internally) is now resolved the same way, keyed off
+    the options object's `name` property instead of a positional
+    argument - so `StudentsRepository.find(...)`/`.update(...)`/etc.
+    resolve to a schema exactly like a direct `Students.find(...)` call.
 -   **Collection field IntelliSense from a MongoSchema repository**: the
     new `mongoSchemaPath` setting points at a repo with
     `schemas/<collection>/<collection>.schema.json` MongoDB `$jsonSchema`

@@ -79,6 +79,15 @@ describe("MongoSchema field IntelliSense", () => {
             assert.strictEqual(collectionVarsMap["ClientOnly"], undefined);
         });
 
+        it("resolves collections created through the Repository wrapper", () => {
+            const { collectionVarsMap } = indexer.mongoSchemaIndexer;
+
+            assert.strictEqual(
+                collectionVarsMap["StudentsRepository"].collectionName,
+                "students"
+            );
+        });
+
         it("normalizes positional and numeric path segments", () => {
             const { MongoSchemaIndexer } = require("../../server/src/mongo-schema-indexer");
 
@@ -204,6 +213,13 @@ describe("MongoSchema field IntelliSense", () => {
             const items = completionsAt("Unknown.find({ ");
             assert.ok(!items || !items.length);
         });
+
+        it("resolves the Repository wrapper the same as a direct collection", () => {
+            const items = completionsAt("StudentsRepository.find({ ");
+            const labels = items.map(({ label }) => label);
+            assert.ok(labels.includes("firstName"));
+            assert.ok(labels.includes("contacts"));
+        });
     });
 
     describe("hover", () => {
@@ -301,8 +317,14 @@ describe("MongoSchema field IntelliSense", () => {
             assert.strictEqual(diagnostic.severity, 2);
         });
 
+        it("flags typos on queries made through the Repository wrapper", () => {
+            const diagnostic = about("repoTypo");
+            assert.ok(diagnostic);
+            assert.ok(diagnostic.message.includes('"students"'));
+        });
+
         it("stays quiet for known, positional, open and dynamic fields", () => {
-            assert.strictEqual(diagnostics.length, 3, JSON.stringify(
+            assert.strictEqual(diagnostics.length, 4, JSON.stringify(
                 diagnostics.map(({ data }) => data.fieldPath)
             ));
         });

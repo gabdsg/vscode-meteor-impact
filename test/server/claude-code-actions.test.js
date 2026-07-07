@@ -120,6 +120,44 @@ describe("CodeActionsProvider - Claude Code actions", () => {
         assert.strictEqual(payload.enclosingKind, undefined);
     });
 
+    it("offers actions with the cursor on the function name itself", () => {
+        // Line 1 is `export function typedHelper(...)`: cursor on the name,
+        // before the parameter paren.
+        const onPlainName = claudeActionsAt("imports/server/helper.ts", {
+            line: 1,
+            character: 20,
+        });
+        assert.strictEqual(onPlainName.length, 3);
+        assert.strictEqual(
+            onPlainName[0].command.arguments[0].functionName,
+            "typedHelper"
+        );
+
+        // Cursor on a static async class method's name (line 5 0-based:
+        // `    static async getSchoolsForInstitution(params: {`).
+        const onMethodName = claudeActionsAt("imports/server/helper.ts", {
+            line: 5,
+            character: 25,
+        });
+        assert.strictEqual(onMethodName.length, 3);
+        const [payload] = onMethodName[0].command.arguments;
+        assert.strictEqual(payload.functionName, "getSchoolsForInstitution");
+        assert.strictEqual(payload.startLine, 6);
+    });
+
+    it("offers actions with the cursor on a Meteor method's name key", () => {
+        // Line 4 0-based is `    "tasks.insert"(text) {`: cursor on the key.
+        const actions = claudeActionsAt("server/methods.js", {
+            line: 4,
+            character: 8,
+        });
+
+        assert.strictEqual(actions.length, 4);
+        const [payload] = actions[0].command.arguments;
+        assert.strictEqual(payload.functionName, "tasks.insert");
+        assert.strictEqual(payload.enclosingName, "tasks.insert");
+    });
+
     it("works in TypeScript files under imports/server", () => {
         const actions = claudeActionsAt("imports/server/helper.ts", {
             line: 1,

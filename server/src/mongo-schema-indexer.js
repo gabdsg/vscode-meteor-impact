@@ -213,29 +213,56 @@ class MongoSchemaIndexer {
             return;
         }
 
-        if (
-            !targetName ||
-            initNode?.type !== NODE_TYPES.NEW_EXPRESSION ||
-            initNode.callee?.type !== NODE_TYPES.MEMBER_EXPRESSION ||
-            initNode.callee.object?.name !== "Mongo" ||
-            initNode.callee.property?.name !== "Collection"
-        ) {
+        if (!targetName || initNode?.type !== NODE_TYPES.NEW_EXPRESSION) {
             return;
         }
 
-        const nameArgument = initNode.arguments?.[0];
+        const collectionName = this.extractCollectionName(initNode);
+        if (!collectionName) return;
+
+        this.collectionVarsMap[targetName] = { collectionName, uri };
+    }
+
+    /**
+     * Collection name behind a `new ...(...)` expression:
+     *  - `new Mongo.Collection("name")` - positional string argument.
+     *  - `new Repository({ name: "name", ... })` - this app's data-access
+     *    wrapper around Mongo.Collection (imports/server/domain/common/
+     *    repository/repository.ts): the name lives on the options object
+     *    instead. Any generic type argument (`new Repository<Student>(...)`)
+     *    doesn't affect the callee/arguments shape.
+     */
+    extractCollectionName(newExpressionNode) {
+        const { NODE_TYPES } = require("./ast-helpers");
+        const { callee, arguments: args } = newExpressionNode;
+
         if (
-            nameArgument?.type !== NODE_TYPES.LITERAL ||
-            typeof nameArgument.value !== "string"
+            callee?.type === NODE_TYPES.MEMBER_EXPRESSION &&
+            callee.object?.name === "Mongo" &&
+            callee.property?.name === "Collection"
         ) {
+            const nameArgument = args?.[0];
             // new Mongo.Collection(null) is a client-only collection.
-            return;
+            return nameArgument?.type === NODE_TYPES.LITERAL &&
+                typeof nameArgument.value === "string"
+                ? nameArgument.value
+                : undefined;
         }
 
-        this.collectionVarsMap[targetName] = {
-            collectionName: nameArgument.value,
-            uri,
-        };
+        if (callee?.type === NODE_TYPES.IDENTIFIER && callee.name === "Repository") {
+            const optionsArgument = args?.[0];
+            if (optionsArgument?.type !== NODE_TYPES.OBJECT_EXPRESSION) return;
+
+            const nameProperty = optionsArgument.properties?.find(
+                ({ key }) => (key?.name ?? key?.value) === "name"
+            );
+            return nameProperty?.value?.type === NODE_TYPES.LITERAL &&
+                typeof nameProperty.value.value === "string"
+                ? nameProperty.value.value
+                : undefined;
+        }
+
+        return undefined;
     }
 
     // "Students" -> the students schema (or undefined). Meteor.users is

@@ -150,6 +150,11 @@ stay for later), or remove both keys to undo entirely. Related:
 
 - `jsconfig.json` and `.vscode/launch.json` are managed by the packages
   watcher / run options commands. Keep them out of version control.
+- If the workspace has a root `tsconfig.json`, the `meteor/*` package
+  paths are merged into its `compilerOptions.paths` too (TypeScript
+  ignores jsconfig for files a tsconfig covers). The edit preserves
+  comments/formatting and only ever writes `meteor/*` keys - the rest of
+  the tsconfig stays yours, and the extension never creates one.
 - `meteor-settings.d.ts` is written by "Generate Meteor.settings Types"
   from your `settings*.json`. Usage:
   `const settings = Meteor.settings as MeteorSettings;`

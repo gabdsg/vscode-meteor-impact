@@ -238,37 +238,54 @@ const findEnclosingFunctionContext = ({ astWalker, position, indexer }) => {
         key && (key.name ?? (typeof key.value === "string" ? key.value : undefined));
 
     let candidate;
-    const addCandidate = (name, fnNode) => {
-        if (!fnNode?.loc || !containsPosition(fnNode.loc)) return;
-        if (candidate && span(candidate.loc) <= span(fnNode.loc)) return;
+    // Containment is checked against the whole declaration node (which
+    // includes the function's name), not just the function expression -
+    // otherwise a cursor on the name of a class method or object property
+    // (whose function value starts at the parameter paren) finds nothing.
+    const addCandidate = (name, declarationNode) => {
+        if (!declarationNode?.loc || !containsPosition(declarationNode.loc))
+            return;
+        if (candidate && span(candidate.loc) <= span(declarationNode.loc))
+            return;
 
-        candidate = { functionName: name, loc: fnNode.loc };
+        candidate = { functionName: name, loc: declarationNode.loc };
     };
+
+    // Function nodes whose name lives on a wrapping Property /
+    // MethodDefinition / VariableDeclarator. Parents are visited before
+    // children, so by the time the bare function node comes around its
+    // naming container has already claimed it - the function must not
+    // compete as a smaller anonymous candidate.
+    const claimedFunctions = new Set();
 
     let container;
     astWalker.walkUntil((node) => {
         const { type } = node;
 
         if (
-            FUNCTION_NODE_TYPES.includes(type) ||
-            ["ObjectMethod", "ClassMethod"].includes(type)
-        ) {
-            addCandidate(node.id?.name || propertyKeyName(node.key), node);
-        } else if (
             type === NODE_TYPES.PROPERTY &&
             FUNCTION_NODE_TYPES.includes(node.value?.type)
         ) {
-            addCandidate(propertyKeyName(node.key), node.value);
+            claimedFunctions.add(node.value);
+            addCandidate(propertyKeyName(node.key), node);
         } else if (
             type === "MethodDefinition" &&
             FUNCTION_NODE_TYPES.includes(node.value?.type)
         ) {
-            addCandidate(propertyKeyName(node.key), node.value);
+            claimedFunctions.add(node.value);
+            addCandidate(propertyKeyName(node.key), node);
         } else if (
             type === "VariableDeclarator" &&
             FUNCTION_NODE_TYPES.includes(node.init?.type)
         ) {
-            addCandidate(node.id?.name, node.init);
+            claimedFunctions.add(node.init);
+            addCandidate(node.id?.name, node);
+        } else if (
+            (FUNCTION_NODE_TYPES.includes(type) ||
+                ["ObjectMethod", "ClassMethod"].includes(type)) &&
+            !claimedFunctions.has(node)
+        ) {
+            addCandidate(node.id?.name || propertyKeyName(node.key), node);
         }
 
         // Innermost Meteor.methods / Meteor.publish / publishComposite /
