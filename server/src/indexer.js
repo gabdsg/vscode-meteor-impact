@@ -10,6 +10,7 @@ class Indexer extends ServerBase {
         serverInstance,
         documentsInstance,
         enableIndexCache = false,
+        mongoSchemaPath = undefined,
     }) {
         if (!rootUri) {
             throw new Error("Expected rootUri");
@@ -27,6 +28,13 @@ class Indexer extends ServerBase {
         this.blazeIndexer = new BlazeIndexer();
         this.methodsAndPublicationsIndexer =
             new MethodsAndPublicationsIndexer();
+
+        const { SessionKeysIndexer } = require("./session-keys-indexer");
+        this.sessionKeysIndexer = new SessionKeysIndexer();
+
+        const { MongoSchemaIndexer } = require("./mongo-schema-indexer");
+        this.mongoSchemaIndexer = new MongoSchemaIndexer();
+        this.mongoSchemaPath = mongoSchemaPath;
 
         const { PackagesIndexer } = require("./packages-indexer");
         this.packagesIndexer = new PackagesIndexer();
@@ -108,6 +116,9 @@ class Indexer extends ServerBase {
                 node,
                 fileContent,
             });
+
+            this.sessionKeysIndexer.indexCall({ node, uri });
+            this.mongoSchemaIndexer.indexCollectionDeclarations({ node, uri });
 
             this.blazeIndexer.indexHelpers({ node, uri, fileContent });
             this.blazeIndexer.indexTemplateJsReferences({ node, uri });
@@ -265,16 +276,21 @@ class Indexer extends ServerBase {
         // Not a Blaze file (parseFile skipped it): drop any previous index
         // entries for it and stop.
         if (!fileInfo) {
-            [this.blazeIndexer, this.methodsAndPublicationsIndexer].forEach(
-                (i) => i?.removeUri?.(uri.fsPath)
-            );
+            [
+                this.blazeIndexer,
+                this.methodsAndPublicationsIndexer,
+                this.sessionKeysIndexer,
+                this.mongoSchemaIndexer,
+            ].forEach((i) => i?.removeUri?.(uri.fsPath));
             delete this.sources[uri.fsPath];
             return false;
         }
 
-        [this.blazeIndexer, this.methodsAndPublicationsIndexer].forEach((i) =>
-            i?.removeUri?.(uri.fsPath)
-        );
+        [
+            this.blazeIndexer,
+            this.methodsAndPublicationsIndexer,
+            this.sessionKeysIndexer,
+        ].forEach((i) => i?.removeUri?.(uri.fsPath));
 
         try {
             this.indexFileInfo(fileInfo);
@@ -306,6 +322,11 @@ class Indexer extends ServerBase {
 
         // Read-only symbols provided by installed packages.
         await this.packagesIndexer.load(this.rootUri);
+
+        // External MongoDB schemas for collection field IntelliSense.
+        await this.mongoSchemaIndexer.loadSchemas(
+            this.resolveMongoSchemaPath()
+        );
 
         // Warm start: restore the maps when nothing changed on disk. HTML
         // sources hydrate eagerly (diagnostics/overview walk them); JS/TS
@@ -465,15 +486,27 @@ class Indexer extends ServerBase {
         );
     }
 
+    // The configured MongoSchema repo path, resolved against the workspace
+    // root (absolute paths pass through). Undefined when not configured.
+    resolveMongoSchemaPath() {
+        if (!this.mongoSchemaPath) return undefined;
+
+        const path = require("path");
+        return path.isAbsolute(this.mongoSchemaPath)
+            ? this.mongoSchemaPath
+            : path.join(this.rootUri.fsPath, this.mongoSchemaPath);
+    }
+
     async onDidChangeConfiguration({
         settings: {
             conf: {
                 settingsEditor: {
-                    meteorImpact: { ignoreDirsOnIndexing } = {},
+                    meteorImpact: { ignoreDirsOnIndexing, mongoSchemaPath } = {},
                 } = {},
             } = {},
         } = {},
     }) {
+        this.mongoSchemaPath = mongoSchemaPath || undefined;
         if (!ignoreDirsOnIndexing) {
             console.warn("No directories set to be ignored, nothing to do...");
             this.ignoreDirs = [];
@@ -498,9 +531,12 @@ class Indexer extends ServerBase {
         });
 
         try {
-            [this.blazeIndexer, this.methodsAndPublicationsIndexer].forEach(
-                (i) => i?.reset?.()
-            );
+            [
+                this.blazeIndexer,
+                this.methodsAndPublicationsIndexer,
+                this.sessionKeysIndexer,
+                this.mongoSchemaIndexer,
+            ].forEach((i) => i?.reset?.());
             // Parse errors surface as in-file diagnostics after the reindex.
             await this.loadSources();
             console.info("* Indexing completed.");

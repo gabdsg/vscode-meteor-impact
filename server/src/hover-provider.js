@@ -31,6 +31,8 @@ class HoverProvider extends ServerBase {
                     ? "typescript"
                     : defUri.fsPath.endsWith(".js")
                     ? "javascript"
+                    : defUri.fsPath.endsWith(".json")
+                    ? "json"
                     : "html";
                 contentLines.push(
                     `\`\`\`${language}\n${snippet}\n\`\`\``
@@ -243,7 +245,62 @@ class HoverProvider extends ServerBase {
             });
         }
 
+        const fieldHover = this.getCollectionFieldHover({
+            uri,
+            position,
+            nodeAtPosition,
+            nodeKey,
+        });
+        if (fieldHover) return fieldHover;
+
         return;
+    }
+
+    // Hover on a field key inside a Mongo query: type/required info plus
+    // the declaration line in the MongoSchema file.
+    getCollectionFieldHover({ uri, position, nodeAtPosition, nodeKey }) {
+        const { mongoSchemaIndexer } = this.indexer;
+        if (!Object.keys(mongoSchemaIndexer.schemasMap).length) return;
+
+        const { positionToOffset } = require("./text-utils");
+        const { getMongoFieldContext } = require("./mongo-field-context");
+
+        const content = this.getFileContent(uri);
+        const context = getMongoFieldContext(
+            content,
+            // The start of the node, so the scanner's key stack does not
+            // include the hovered key itself.
+            positionToOffset(content, {
+                line: nodeAtPosition.loc.start.line - 1,
+                character: nodeAtPosition.loc.start.column,
+            }) || positionToOffset(content, position)
+        );
+        if (!context) return;
+
+        const schema = mongoSchemaIndexer.resolveCollection(
+            context.collectionVarName
+        );
+        if (!schema) return;
+
+        const dottedPath = context.pathPrefix
+            ? `${context.pathPrefix}.${nodeKey}`
+            : nodeKey;
+        const field = mongoSchemaIndexer.lookupField(schema, dottedPath);
+        if (!field) return;
+
+        const collectionName =
+            mongoSchemaIndexer.collectionVarsMap[context.collectionVarName]
+                ?.collectionName || "users";
+
+        return this.createHover({
+            name: dottedPath,
+            subtitle: `field of collection \`${collectionName}\``,
+            defUri: this.parseUri(`file://${schema.schemaFsPath}`),
+            defLine: field.line,
+            doc: `type: ${field.bsonTypes.join(" | ") || "unknown"}${
+                field.required ? " — required" : ""
+            }`,
+        });
     }
 }
 

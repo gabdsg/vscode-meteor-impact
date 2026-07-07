@@ -10,6 +10,33 @@ const json5 = require("json5");
 const { uniq } = require("lodash");
 const dontMerge = (_, source) => source;
 
+/**
+ * TypeScript ignores jsconfig.json for every file a tsconfig.json covers,
+ * so projects with a tsconfig also need the meteor/* paths there. The
+ * tsconfig is user-owned (comments, hand-tuned options): edits are
+ * comment-preserving and only touch meteor/* path keys.
+ * Returns true when a root tsconfig.json exists.
+ */
+async function mergePathsIntoTsConfig(paths) {
+    const tsconfigResults = await workspace.findFiles("tsconfig.json");
+    const tsconfigUri = tsconfigResults[0];
+    if (!tsconfigUri) return false;
+
+    const {
+        mergePathsIntoTsConfigContent,
+    } = require("./tsconfig-paths");
+
+    const content = new TextDecoder().decode(
+        await workspace.fs.readFile(tsconfigUri)
+    );
+    const updated = mergePathsIntoTsConfigContent(content, paths);
+
+    if (updated !== content) {
+        await workspace.fs.writeFile(tsconfigUri, Buffer.from(updated));
+    }
+    return true;
+}
+
 async function addImportedPackagesToJsConfig() {
     const filesResults = await workspace.findFiles(".meteor/packages");
     const fileUri = filesResults[0];
@@ -101,8 +128,12 @@ async function addImportedPackagesToJsConfig() {
         dontMerge
     );
 
+    const mergedIntoTsConfig = await mergePathsIntoTsConfig(paths);
+
     window.showInformationMessage(
-        "Successfully added imported packages to jsconfig file."
+        `Successfully added imported packages to jsconfig${
+            mergedIntoTsConfig ? " and tsconfig" : ""
+        } file.`
     );
 }
 
@@ -180,6 +211,8 @@ async function addCustomPackageOptionsToJsConfig() {
             Uri.joinPath(workspace.workspaceFolders[0].uri, JSCONFIG.uri),
             dontMerge
         );
+
+        await mergePathsIntoTsConfig(paths);
     }
 
     window.showInformationMessage(

@@ -77,6 +77,26 @@ Works in `.js`, `.ts` and Spacebars `.html` files:
     it) inserts the matching `{{/if}}`; block regions fold.
 -   **Inlay hints**: helper call arguments show their parameter name
     inline.
+-   **Claude Code actions**: with the cursor on a function in a
+    server-side JS/TS file, the Cmd+. menu offers "Create tests",
+    "Add JSDoc", "Explain this function" and - inside Meteor
+    methods/publications - "Security-review" with Claude Code. The
+    prompt (function name, file, line range, enclosing method) is
+    prefilled into a Claude Code CLI terminal for review; the
+    `claudeCodeAutoSend` setting submits it immediately instead.
+-   **Session/ReactiveDict key intelligence**: `Session.get("...")` and
+    ReactiveDict keys get completion, go-to-definition (the first
+    `set`), find-all-references across the app, and hints for keys that
+    are read-but-never-set (likely typos) or set-but-never-read (dead
+    state).
+-   **Collection field IntelliSense**: point the `mongoSchemaPath`
+    setting at a MongoDB `$jsonSchema` repository
+    (`schemas/<collection>/<collection>.schema.json`) and field names in
+    `find`/`findOne`/`update`/`insert` selectors, `$set`-style modifiers
+    and `fields` projections get completion (with types), hover,
+    go-to-definition into the schema file and unknown-field diagnostics
+    (warnings under `additionalProperties: false` objects, hints
+    elsewhere; dotted and positional paths understood).
 -   **Instant warm starts**: the index is cached, so an unchanged project
     skips re-parsing on startup; parse errors show as in-file squiggles.
 

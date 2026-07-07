@@ -59,8 +59,271 @@ class DiagnosticsProvider extends ServerBase {
         this.checkUnusedHelpers(diagnosticsByUri);
         this.checkMethodAndPublicationCalls(diagnosticsByUri);
         this.checkUnusedMethodsAndPublications(diagnosticsByUri);
+        this.checkSessionKeys(diagnosticsByUri);
+        this.checkCollectionFieldNames(diagnosticsByUri);
 
         return diagnosticsByUri;
+    }
+
+    /**
+     * Field names in query selectors / update modifiers / projections /
+     * insert docs that the collection's MongoDB schema doesn't declare.
+     * Warning when the schema explicitly closes the wrapping object
+     * (additionalProperties: false), Hint otherwise - open subtrees hold
+     * legitimate dynamic fields. Anything not confidently classified is
+     * skipped: false negatives over false positives.
+     */
+    checkCollectionFieldNames(diagnosticsByUri) {
+        const { mongoSchemaIndexer } = this.indexer;
+        if (!Object.keys(mongoSchemaIndexer.schemasMap).length) return;
+
+        const { NODE_TYPES } = require("./ast-helpers");
+        const { DiagnosticSeverity } = require("vscode-languageserver");
+
+        const SELECTOR_METHODS = ["find", "findOne", "count", "remove"];
+        const UPDATE_METHODS = ["update", "upsert"];
+        const INSERT_METHODS = ["insert"];
+
+        const jsSources = Object.values(this.indexer.getSources()).filter(
+            ({ extension }) => extension !== ".html"
+        );
+
+        for (const { astWalker, uri } of jsSources) {
+            astWalker.walkUntil((node) => {
+                if (node?.type !== NODE_TYPES.CALL_EXPRESSION) return;
+
+                const callee = node.callee;
+                if (
+                    callee?.type !== NODE_TYPES.MEMBER_EXPRESSION ||
+                    callee.object?.type !== NODE_TYPES.IDENTIFIER
+                ) {
+                    return;
+                }
+
+                const baseMethod = `${callee.property?.name || ""}`.replace(
+                    /Async$/,
+                    ""
+                );
+                const schema = mongoSchemaIndexer.resolveCollection(
+                    callee.object.name
+                );
+                if (!schema) return;
+
+                const collectionName =
+                    mongoSchemaIndexer.collectionVarsMap[callee.object.name]
+                        ?.collectionName;
+                const [firstArg, secondArg] = node.arguments || [];
+                const report = ({ keyNode, dottedPath }) => {
+                    const field = mongoSchemaIndexer.lookupField(
+                        schema,
+                        dottedPath
+                    );
+                    if (field) return;
+                    if (!mongoSchemaIndexer.isPathFlaggable(schema, dottedPath))
+                        return;
+
+                    this.addDiagnostic(diagnosticsByUri, uri, {
+                        severity: mongoSchemaIndexer.isUnderClosedObject(
+                            schema,
+                            dottedPath
+                        )
+                            ? DiagnosticSeverity.Warning
+                            : DiagnosticSeverity.Hint,
+                        range: this.createRange(keyNode.loc),
+                        message: `Field "${dottedPath}" is not defined in the MongoDB schema for collection "${collectionName}".`,
+                        data: {
+                            kind: "unknown-collection-field",
+                            collectionName,
+                            fieldPath: dottedPath,
+                        },
+                    });
+                };
+
+                if (
+                    [...SELECTOR_METHODS, ...UPDATE_METHODS].includes(
+                        baseMethod
+                    )
+                ) {
+                    this.validateFieldObject({
+                        objectNode: firstArg,
+                        prefix: "",
+                        mode: "selector",
+                        report,
+                    });
+                }
+                if (INSERT_METHODS.includes(baseMethod)) {
+                    this.validateFieldObject({
+                        objectNode: firstArg,
+                        prefix: "",
+                        mode: "doc",
+                        report,
+                    });
+                }
+                if (UPDATE_METHODS.includes(baseMethod)) {
+                    this.validateUpdateModifier({ node: secondArg, report });
+                }
+                if (["find", "findOne"].includes(baseMethod)) {
+                    this.validateProjection({ node: secondArg, report });
+                }
+            });
+        }
+    }
+
+    // Selector / insert-doc walker. Static keys only; computed keys,
+    // spreads and template literals are invisible on purpose.
+    validateFieldObject({ objectNode, prefix, mode, report }) {
+        const { NODE_TYPES } = require("./ast-helpers");
+        if (objectNode?.type !== NODE_TYPES.OBJECT_EXPRESSION) return;
+
+        for (const property of objectNode.properties || []) {
+            if (property.type !== NODE_TYPES.PROPERTY || property.computed) {
+                continue;
+            }
+
+            const keyNode = property.key;
+            const key =
+                keyNode?.type === NODE_TYPES.IDENTIFIER
+                    ? keyNode.name
+                    : keyNode?.type === NODE_TYPES.LITERAL &&
+                      typeof keyNode.value === "string"
+                    ? keyNode.value
+                    : undefined;
+            if (!key) continue;
+
+            if (key.startsWith("$")) {
+                // $or/$and/$nor: arrays of selectors at the same prefix.
+                if (
+                    ["$or", "$and", "$nor"].includes(key) &&
+                    property.value?.type === "ArrayExpression"
+                ) {
+                    for (const element of property.value.elements || []) {
+                        this.validateFieldObject({
+                            objectNode: element,
+                            prefix,
+                            mode,
+                            report,
+                        });
+                    }
+                }
+                // $elemMatch: selector scoped to the wrapping field.
+                if (key === "$elemMatch") {
+                    this.validateFieldObject({
+                        objectNode: property.value,
+                        prefix,
+                        mode,
+                        report,
+                    });
+                }
+                // Other operators ($in, $gt, $exists...): values, not
+                // field names.
+                continue;
+            }
+
+            const dottedPath = prefix ? `${prefix}.${key}` : key;
+            report({ keyNode, dottedPath });
+
+            if (property.value?.type !== NODE_TYPES.OBJECT_EXPRESSION) {
+                continue;
+            }
+            // Insert documents nest plain objects; selectors nest operator
+            // objects ({ contacts: { $elemMatch: {...} } }). Both extend
+            // the dotted prefix.
+            this.validateFieldObject({
+                objectNode: property.value,
+                prefix: dottedPath,
+                mode,
+                report,
+            });
+        }
+    }
+
+    validateUpdateModifier({ node, report }) {
+        const { NODE_TYPES } = require("./ast-helpers");
+        const {
+            FIELD_MODIFIER_OPERATORS,
+        } = require("./mongo-field-context");
+
+        if (node?.type !== NODE_TYPES.OBJECT_EXPRESSION) return;
+
+        for (const property of node.properties || []) {
+            if (property.type !== NODE_TYPES.PROPERTY || property.computed) {
+                continue;
+            }
+
+            const operator =
+                property.key?.name ??
+                (typeof property.key?.value === "string"
+                    ? property.key.value
+                    : undefined);
+            if (!FIELD_MODIFIER_OPERATORS.includes(operator)) continue;
+
+            // Keys under $set-style operators are full dotted paths.
+            this.validateFieldObject({
+                objectNode: property.value,
+                prefix: "",
+                mode: "doc",
+                report,
+            });
+        }
+    }
+
+    validateProjection({ node, report }) {
+        const { NODE_TYPES } = require("./ast-helpers");
+        if (node?.type !== NODE_TYPES.OBJECT_EXPRESSION) return;
+
+        for (const property of node.properties || []) {
+            const key =
+                property.key?.name ??
+                (typeof property.key?.value === "string"
+                    ? property.key.value
+                    : undefined);
+            if (!["fields", "projection"].includes(key)) continue;
+
+            this.validateFieldObject({
+                objectNode: property.value,
+                prefix: "",
+                mode: "doc",
+                report,
+            });
+        }
+    }
+
+    /**
+     * Session/ReactiveDict keys that are read but never set (likely a
+     * typo) or set but never read (dead state). Hints, not warnings: keys
+     * can be written by packages or through dynamic (non-literal) keys the
+     * indexer can't see.
+     */
+    checkSessionKeys(diagnosticsByUri) {
+        const {
+            DiagnosticSeverity,
+            DiagnosticTag,
+        } = require("vscode-languageserver");
+
+        for (const [key, { sets, gets }] of Object.entries(
+            this.indexer.sessionKeysIndexer.keysMap
+        )) {
+            if (gets.length && !sets.length) {
+                for (const { node, uri } of gets) {
+                    this.addDiagnostic(diagnosticsByUri, uri, {
+                        severity: DiagnosticSeverity.Hint,
+                        range: this.createRange(node.loc),
+                        message: `Session key "${key}" is read but never set in this project.`,
+                    });
+                }
+            }
+
+            if (sets.length && !gets.length) {
+                for (const { node, uri } of sets) {
+                    this.addDiagnostic(diagnosticsByUri, uri, {
+                        severity: DiagnosticSeverity.Hint,
+                        tags: [DiagnosticTag.Unnecessary],
+                        range: this.createRange(node.loc),
+                        message: `Session key "${key}" is set but never read in this project.`,
+                    });
+                }
+            }
+        }
     }
 
     // Files the indexer couldn't parse: a real error squiggle at the spot,

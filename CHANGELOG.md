@@ -4,6 +4,57 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.1.0] - 2026-07-07
+
+### Added
+
+-   **Meteor package paths land in tsconfig.json too**: TypeScript ignores
+    jsconfig.json for every file a tsconfig.json covers, so TS projects
+    never got the `meteor/*` module mappings (Atmosphere imports like
+    `meteor/quave:testing` were unresolvable in .ts files). When a root
+    tsconfig.json exists, the imported/local package paths are now merged
+    into its `compilerOptions.paths` as well - through a comment- and
+    formatting-preserving JSONC edit that only ever touches `meteor/*`
+    keys, never user-owned ones. The extension still does not create a
+    tsconfig.json: that file is the project's own build config.
+
+-   **"... with Claude Code" code actions**: on a function in a
+    server-side JS/TS file (a `server/` path segment, a file defining
+    methods/publications, or a `Meteor.isServer` guard), Cmd+. offers
+    "Create tests", "Add JSDoc", "Explain this function" and - inside a
+    Meteor method/publication - "Security-review" with Claude Code. The
+    generated prompt carries the function name, file, line range and
+    enclosing method/publication name, and is prefilled (not sent) into
+    a "Claude Code (Meteor Impact)" terminal running the `claude` CLI so
+    it can be reviewed and edited first. New settings:
+    `claudeCodeAutoSend` (submit immediately, off by default) and
+    `claudeCodeCliPath`.
+-   **Session/ReactiveDict key intelligence**: string-literal keys of
+    `Session.get/set/setDefault/equals` (and the same calls on variables
+    initialized with `new ReactiveDict()`) are indexed like method names:
+    completion inside the key string, go-to-definition to the first
+    `set`, find-all-references across the app, and hint diagnostics for
+    keys read-but-never-set or set-but-never-read.
+-   **Collection field IntelliSense recognizes the `Repository` wrapper
+    too**: besides `new Mongo.Collection("name")`, `new Repository({ name:
+    "name", ... })` (this app's data-access wrapper, which creates the
+    Mongo.Collection internally) is now resolved the same way, keyed off
+    the options object's `name` property instead of a positional
+    argument - so `StudentsRepository.find(...)`/`.update(...)`/etc.
+    resolve to a schema exactly like a direct `Students.find(...)` call.
+-   **Collection field IntelliSense from a MongoSchema repository**: the
+    new `mongoSchemaPath` setting points at a repo with
+    `schemas/<collection>/<collection>.schema.json` MongoDB `$jsonSchema`
+    validators. Collection variables (`new Mongo.Collection("name")`,
+    aliases included) resolve to their schema, unlocking field-name
+    completion with types inside selectors, `$set`-style modifiers and
+    `fields`/`projection` objects; hover with type/required info;
+    go-to-definition from a field key to its schema line; and
+    unknown-field diagnostics (Warning under `additionalProperties:
+    false` objects, Hint elsewhere; dotted, positional (`$`, `$[]`,
+    numeric) and `$elemMatch` paths understood; dynamic keys and open
+    subtrees are never flagged).
+
 ## [2.0.7] - 2026-07-07
 
 ### Fixed

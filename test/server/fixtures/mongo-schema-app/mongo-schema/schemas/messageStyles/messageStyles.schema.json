@@ -1,0 +1,12 @@
+{
+    "bsonType": "object",
+    "required": ["styleName"],
+    "properties": {
+        "_id": {
+            "bsonType": "string"
+        },
+        "styleName": {
+            "bsonType": "string"
+        }
+    }
+}

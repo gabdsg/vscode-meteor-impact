@@ -1,0 +1,34 @@
+{
+    "bsonType": "object",
+    "required": ["firstName", "contacts"],
+    "properties": {
+        "_id": {
+            "bsonType": "string"
+        },
+        "firstName": {
+            "bsonType": ["string", "null"]
+        },
+        "lastName": {
+            "bsonType": ["string", "null"]
+        },
+        "contacts": {
+            "bsonType": "array",
+            "items": {
+                "additionalProperties": false,
+                "bsonType": "object",
+                "required": ["relationship", "number"],
+                "properties": {
+                    "relationship": {
+                        "bsonType": "string"
+                    },
+                    "number": {
+                        "bsonType": "string"
+                    }
+                }
+            }
+        },
+        "meta": {
+            "bsonType": "object"
+        }
+    }
+}

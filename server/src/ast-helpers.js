@@ -209,6 +209,182 @@ const extractJsDoc = (fileContent, nodeStart) => {
     return text || undefined;
 };
 
+const FUNCTION_NODE_TYPES = [
+    "FunctionDeclaration",
+    "FunctionExpression",
+    "ArrowFunctionExpression",
+];
+
+/**
+ * The innermost function containing the position, with the best name the
+ * surrounding syntax provides (declaration id, object property key - which
+ * covers Meteor.methods({ "tasks.insert"() {} }) string keys -, class
+ * method key or variable declarator id), plus the Meteor method/publication
+ * wrapping the position when there is one.
+ *
+ * The walker has no parent links, so naming containers (Property,
+ * VariableDeclarator, MethodDefinition) are recorded as candidates using
+ * their function value's location; the smallest span wins.
+ */
+const findEnclosingFunctionContext = ({ astWalker, position, indexer }) => {
+    const wrappedPosition = createPositionObject(position);
+
+    const containsPosition = (loc) =>
+        !!loc && astWalker.isSymbolInPositionRange(wrappedPosition, loc);
+    const span = ({ start, end }) =>
+        (end.line - start.line) * 1e6 + (end.column - start.column);
+
+    const propertyKeyName = (key) =>
+        key && (key.name ?? (typeof key.value === "string" ? key.value : undefined));
+
+    let candidate;
+    // Containment is checked against the whole declaration node (which
+    // includes the function's name), not just the function expression -
+    // otherwise a cursor on the name of a class method or object property
+    // (whose function value starts at the parameter paren) finds nothing.
+    const addCandidate = (name, declarationNode) => {
+        if (!declarationNode?.loc || !containsPosition(declarationNode.loc))
+            return;
+        if (candidate && span(candidate.loc) <= span(declarationNode.loc))
+            return;
+
+        candidate = { functionName: name, loc: declarationNode.loc };
+    };
+
+    // Function nodes whose name lives on a wrapping Property /
+    // MethodDefinition / VariableDeclarator. Parents are visited before
+    // children, so by the time the bare function node comes around its
+    // naming container has already claimed it - the function must not
+    // compete as a smaller anonymous candidate.
+    const claimedFunctions = new Set();
+
+    let container;
+    astWalker.walkUntil((node) => {
+        const { type } = node;
+
+        if (
+            type === NODE_TYPES.PROPERTY &&
+            FUNCTION_NODE_TYPES.includes(node.value?.type)
+        ) {
+            claimedFunctions.add(node.value);
+            addCandidate(propertyKeyName(node.key), node);
+        } else if (
+            type === "MethodDefinition" &&
+            FUNCTION_NODE_TYPES.includes(node.value?.type)
+        ) {
+            claimedFunctions.add(node.value);
+            addCandidate(propertyKeyName(node.key), node);
+        } else if (
+            type === "VariableDeclarator" &&
+            FUNCTION_NODE_TYPES.includes(node.init?.type)
+        ) {
+            claimedFunctions.add(node.init);
+            addCandidate(node.id?.name, node);
+        } else if (
+            (FUNCTION_NODE_TYPES.includes(type) ||
+                ["ObjectMethod", "ClassMethod"].includes(type)) &&
+            !claimedFunctions.has(node)
+        ) {
+            addCandidate(node.id?.name || propertyKeyName(node.key), node);
+        }
+
+        // Innermost Meteor.methods / Meteor.publish / publishComposite /
+        // new ValidatedMethod call wrapping the position.
+        const methodsAndPublicationsIndexer =
+            indexer?.methodsAndPublicationsIndexer;
+        if (
+            methodsAndPublicationsIndexer &&
+            [NODE_TYPES.CALL_EXPRESSION, NODE_TYPES.NEW_EXPRESSION].includes(
+                type
+            ) &&
+            node.callee &&
+            containsPosition(node.loc)
+        ) {
+            if (methodsAndPublicationsIndexer.isMethod(node)) {
+                container = { node, kind: "method" };
+            } else if (methodsAndPublicationsIndexer.isPublication(node)) {
+                container = { node, kind: "publication" };
+            }
+        }
+    });
+
+    if (!candidate) return;
+
+    return {
+        ...candidate,
+        functionName: candidate.functionName || "(anonymous)",
+        ...extractEnclosingMeteorName({ container, containsPosition }),
+    };
+};
+
+/**
+ * Name of the method/publication whose declaration wraps the position:
+ * the property key of the Meteor.methods entry containing the position,
+ * the "name" property of a ValidatedMethod, or the first string-literal
+ * argument of Meteor.publish / publishComposite.
+ */
+const extractEnclosingMeteorName = ({ container, containsPosition }) => {
+    if (!container) return {};
+
+    const {
+        METEOR_SUPPORTED_PACKAGES_IDENTIFIER,
+        METEOR_IDENTIFIERS,
+    } = require("./constants");
+    const { node, kind } = container;
+    const nodeArguments = Array.isArray(node.arguments) ? node.arguments : [];
+
+    const result = (name) =>
+        name ? { enclosingKind: kind, enclosingName: name } : {};
+
+    if (kind === "publication") {
+        const literal = nodeArguments.find(
+            ({ type, value }) =>
+                type === NODE_TYPES.LITERAL && typeof value === "string"
+        );
+        return result(literal?.value);
+    }
+
+    const isValidatedMethod =
+        node.callee?.name ===
+        METEOR_SUPPORTED_PACKAGES_IDENTIFIER.VALIDATED_METHODS.NAME;
+    const isMeteorMethods =
+        node.callee?.object?.name === METEOR_IDENTIFIERS.METEOR;
+
+    for (const arg of nodeArguments) {
+        if (
+            arg.type !== NODE_TYPES.OBJECT_EXPRESSION ||
+            !Array.isArray(arg.properties)
+        ) {
+            continue;
+        }
+
+        for (const property of arg.properties) {
+            if (
+                isValidatedMethod &&
+                property.key?.name ===
+                    METEOR_SUPPORTED_PACKAGES_IDENTIFIER.VALIDATED_METHODS.KEY
+            ) {
+                return result(property.value?.value);
+            }
+
+            if (
+                isMeteorMethods &&
+                property.loc &&
+                containsPosition(property.loc)
+            ) {
+                return result(
+                    property.key?.name ??
+                        (typeof property.key?.value === "string"
+                            ? property.key.value
+                            : undefined)
+                );
+            }
+        }
+    }
+
+    return {};
+};
+
 module.exports = {
     createPositionObject,
     AstWalker,
@@ -216,5 +392,6 @@ module.exports = {
     parseJsSource,
     extractFunctionSignature,
     extractJsDoc,
+    findEnclosingFunctionContext,
     NODE_NAMES,
 };

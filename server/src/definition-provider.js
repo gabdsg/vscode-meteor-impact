@@ -42,8 +42,21 @@ class DefinitionProvider extends ServerBase {
                 templateUri: this.parseUri(uri),
                 helper: nodeKey,
             }) ||
-            this.indexer.blazeIndexer.getGlobalHelper(nodeKey);
+            this.indexer.blazeIndexer.getGlobalHelper(nodeKey) ||
+            // Session/ReactiveDict keys resolve to their first set. Last in
+            // the chain: a name collision with a method resolves to the
+            // method.
+            this.indexer.sessionKeysIndexer.getDefinition(nodeKey);
         if (!definitionInfo) {
+            // Field key inside a Mongo query: jump to its declaration in
+            // the MongoSchema file.
+            const fieldLocation = this.getCollectionFieldLocation({
+                uri,
+                nodeAtPosition,
+                nodeKey,
+            });
+            if (fieldLocation) return fieldLocation;
+
             // Event key ("click .js-save"): jump to the elements the
             // selector targets in the template HTML.
             const selectorLocations = this.getEventSelectorLocations(nodeKey);
@@ -83,6 +96,41 @@ class DefinitionProvider extends ServerBase {
                 _end.line - 1,
                 _end.column
             )
+        );
+    }
+
+    getCollectionFieldLocation({ uri, nodeAtPosition, nodeKey }) {
+        const { mongoSchemaIndexer } = this.indexer;
+        if (!Object.keys(mongoSchemaIndexer.schemasMap).length) return;
+
+        const { positionToOffset } = require("./text-utils");
+        const { getMongoFieldContext } = require("./mongo-field-context");
+
+        const content = this.getFileContent(uri);
+        const context = getMongoFieldContext(
+            content,
+            positionToOffset(content, {
+                line: nodeAtPosition.loc.start.line - 1,
+                character: nodeAtPosition.loc.start.column,
+            })
+        );
+        if (!context) return;
+
+        const schema = mongoSchemaIndexer.resolveCollection(
+            context.collectionVarName
+        );
+        if (!schema) return;
+
+        const dottedPath = context.pathPrefix
+            ? `${context.pathPrefix}.${nodeKey}`
+            : nodeKey;
+        const field = mongoSchemaIndexer.lookupField(schema, dottedPath);
+        if (!field) return;
+
+        const { Location, Range } = require("vscode-languageserver");
+        return Location.create(
+            this.parseUri(`file://${schema.schemaFsPath}`).path,
+            Range.create(field.line - 1, 0, field.line - 1, 0)
         );
     }
 

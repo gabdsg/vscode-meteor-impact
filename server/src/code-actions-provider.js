@@ -36,10 +36,105 @@ class CodeActionsProvider extends ServerBase {
                 matchesOnly("refactor.extract") &&
                 this.createExtractTemplateAction({ uri, range });
 
-            return [...quickFixes, ...(extractAction ? [extractAction] : [])];
+            const claudeCodeActions = matchesOnly("refactor.claudeCode")
+                ? this.createClaudeCodeActions({ uri, range })
+                : [];
+
+            return [
+                ...quickFixes,
+                ...(extractAction ? [extractAction] : []),
+                ...claudeCodeActions,
+            ];
         } catch (e) {
             console.warn(`Code actions failed for ${uri}. ${e}`);
         }
+    }
+
+    /**
+     * "... with Claude Code" actions for a function in a server-side JS/TS
+     * file. The server only computes the context (function name, range,
+     * enclosing Meteor method/publication); the actual prompt building and
+     * terminal handoff happen client-side in the hidden
+     * _meteorImpact.claudeCode.run command.
+     */
+    createClaudeCodeActions({ uri, range }) {
+        if (!range || !this.isFileJS(uri)) return [];
+
+        const { isServerSideFile } = require("./meteor-context");
+        const {
+            AstWalker,
+            parseJsSource,
+            findEnclosingFunctionContext,
+        } = require("./ast-helpers");
+
+        const parsedUri = this.parseUri(uri);
+        const fileContent = this.getFileContent(parsedUri);
+
+        const { isServer } = isServerSideFile({
+            fsPath: parsedUri.fsPath,
+            rootFsPath: this.rootUri.fsPath,
+            indexer: this.indexer,
+            fileContent,
+        });
+        if (!isServer) return [];
+
+        // Parse the live buffer: the index lags behind typing.
+        let astWalker;
+        try {
+            astWalker = new AstWalker(fileContent, parseJsSource, {
+                extension: this.getFileExtension(uri),
+                errorRecovery: true,
+            });
+        } catch (e) {
+            return [];
+        }
+
+        const functionContext = findEnclosingFunctionContext({
+            astWalker,
+            position: range.start,
+            indexer: this.indexer,
+        });
+        if (!functionContext) return [];
+
+        const { functionName, loc, enclosingKind, enclosingName } =
+            functionContext;
+
+        const path = require("path");
+        const payload = {
+            filePath: path.relative(this.rootUri.fsPath, parsedUri.fsPath),
+            functionName,
+            startLine: loc.start.line,
+            endLine: loc.end.line,
+            enclosingKind,
+            enclosingName,
+        };
+
+        const buildAction = (title, action) => ({
+            title,
+            kind: "refactor.claudeCode",
+            command: {
+                title,
+                command: "_meteorImpact.claudeCode.run",
+                arguments: [{ ...payload, action }],
+            },
+        });
+
+        const actions = [
+            buildAction("Create tests with Claude Code", "createTests"),
+            buildAction("Add JSDoc with Claude Code", "addJsdoc"),
+            buildAction("Explain this function with Claude Code", "explain"),
+        ];
+
+        if (enclosingKind && enclosingName) {
+            actions.push(
+                buildAction(
+                    `Security-review this ${enclosingKind} with Claude Code`,
+                    "securityReview"
+                )
+            );
+        }
+
+        return actions;
     }
 
     createAction({ uri, diagnostic }) {
