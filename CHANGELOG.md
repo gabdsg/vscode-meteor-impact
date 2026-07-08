@@ -4,6 +4,20 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.1.2] - 2026-07-08
+
+### Fixed
+
+-   **Dynamic template inclusions no longer flagged as missing**:
+    `{{> extrasTemplate}}` where the name is not a template but a helper
+    or a data param holding a template object (e.g.
+    `{{> topTitleBar extrasTemplate=(getTemplate "...")}}`) no longer
+    reports 'Template "extrasTemplate" is not defined in this project'.
+    Blaze resolves inclusion names through the helper/data lookup chain
+    too, so the check now applies the same resolvability rules as helper
+    diagnostics (template helpers, inclusion data params, block
+    variables, global helpers).
+
 ## [2.1.1] - 2026-07-08
 
 ### Fixed

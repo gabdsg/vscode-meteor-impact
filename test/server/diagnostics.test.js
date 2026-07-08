@@ -74,6 +74,20 @@ describe("DiagnosticsProvider", () => {
         );
     });
 
+    it("does not flag dynamic partials resolvable from a data param", () => {
+        const diagnostics = diagnosticsFor("diag.html");
+
+        // {{> extrasTemplate}} inside topTitleBar: not a template name,
+        // but a data param passed at the inclusion site
+        // ({{> topTitleBar extrasTemplate=(getTemplate "...")}}).
+        assert.ok(
+            !diagnostics.some(({ message }) =>
+                message.includes("extrasTemplate")
+            ),
+            "extrasTemplate is passed as a data param and should not be flagged"
+        );
+    });
+
     it("does not flag helpers used only as call arguments", () => {
         const diagnostics = diagnosticsFor("diag.ts");
 

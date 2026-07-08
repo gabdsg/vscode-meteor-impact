@@ -443,16 +443,47 @@ class DiagnosticsProvider extends ServerBase {
         }
     }
 
+    /**
+     * Whether a name in a template body resolves through Blaze's
+     * helper/data lookup chain: a block variable at the offset, a helper
+     * of the wrapping template, data passed at an inclusion site
+     * ({{> template name=...}}), or a global helper (app or package).
+     */
+    resolveTemplateSymbol(name, fileContent, offset) {
+        const {
+            getBlockVariablesAtOffset,
+            getWrappingTemplateName,
+        } = require("./text-utils");
+        const { templateIndexMap, globalHelpersMap } =
+            this.indexer.blazeIndexer;
+
+        const wrappingTemplateName = getWrappingTemplateName(
+            fileContent,
+            offset
+        );
+
+        const resolvable =
+            getBlockVariablesAtOffset(fileContent, offset).some(
+                (blockVar) => blockVar.name === name
+            ) ||
+            (!!wrappingTemplateName &&
+                (!!templateIndexMap[wrappingTemplateName]?.helpers?.[name] ||
+                    !!this.indexer.blazeIndexer.getDataParams(
+                        wrappingTemplateName,
+                        name
+                    ))) ||
+            !!globalHelpersMap[name] ||
+            !!this.indexer.packagesIndexer?.globalHelpers[name];
+
+        return { wrappingTemplateName, resolvable };
+    }
+
     checkUnresolvedSymbols(diagnosticsByUri, htmlSources) {
         const { NODE_TYPES } = require("./ast-helpers");
         const { DiagnosticSeverity } = require("vscode-languageserver");
-        const {
-            positionToOffset,
-            getWrappingTemplateName,
-        } = require("./text-utils");
+        const { positionToOffset } = require("./text-utils");
 
-        const { templateIndexMap, globalHelpersMap } =
-            this.indexer.blazeIndexer;
+        const { templateIndexMap } = this.indexer.blazeIndexer;
 
         for (const { astWalker, uri, fileContent } of htmlSources) {
             astWalker.walkUntil((node) => {
@@ -467,6 +498,25 @@ class DiagnosticsProvider extends ServerBase {
                         KNOWN_EXTERNAL_PARTIALS.includes(partialName) ||
                         templateIndexMap[partialName] ||
                         this.indexer.packagesIndexer?.templates[partialName]
+                    ) {
+                        return;
+                    }
+
+                    // Dynamic inclusion: {{> extrasTemplate}} where the
+                    // name is a helper or a data param holding a template
+                    // object ({{> t extrasTemplate=(getTemplate "x")}}).
+                    // Blaze resolves the name as helper/data too, so only
+                    // an unresolvable name is a missing template.
+                    const nameOffset = positionToOffset(fileContent, {
+                        line: node.name.loc.start.line - 1,
+                        character: node.name.loc.start.column,
+                    });
+                    if (
+                        this.resolveTemplateSymbol(
+                            partialName,
+                            fileContent,
+                            nameOffset
+                        ).resolvable
                     ) {
                         return;
                     }
@@ -507,32 +557,13 @@ class DiagnosticsProvider extends ServerBase {
                     character: path.loc.start.column,
                 });
 
-                const wrappingTemplateName = getWrappingTemplateName(
-                    fileContent,
-                    pathOffset
-                );
-
-                const { getBlockVariablesAtOffset } = require("./text-utils");
-                const isBlockVariable = getBlockVariablesAtOffset(
-                    fileContent,
-                    pathOffset
-                ).some(({ name }) => name === helperName);
-
-                const isResolvable =
-                    isBlockVariable ||
-                    (!!wrappingTemplateName &&
-                        (!!templateIndexMap[wrappingTemplateName]?.helpers?.[
-                            helperName
-                        ] ||
-                            // Data passed at inclusion sites:
-                            // {{> template helperName=...}}.
-                            !!this.indexer.blazeIndexer.getDataParams(
-                                wrappingTemplateName,
-                                helperName
-                            ))) ||
-                    !!globalHelpersMap[helperName] ||
-                    !!this.indexer.packagesIndexer?.globalHelpers[helperName];
-                if (isResolvable) return;
+                const { wrappingTemplateName, resolvable } =
+                    this.resolveTemplateSymbol(
+                        helperName,
+                        fileContent,
+                        pathOffset
+                    );
+                if (resolvable) return;
 
                 this.addDiagnostic(diagnosticsByUri, uri, {
                     severity: DiagnosticSeverity.Warning,

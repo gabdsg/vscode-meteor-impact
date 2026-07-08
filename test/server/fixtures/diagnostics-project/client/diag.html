@@ -16,3 +16,13 @@
 <template name="dup">
     <span>duplicated</span>
 </template>
+
+<template name="topTitleBar">
+    {{#if extrasTemplate}}
+        {{> extrasTemplate}}
+    {{/if}}
+</template>
+
+<template name="titleBarHost">
+    {{> topTitleBar extrasTemplate=(getTemplate "dup")}}
+</template>
