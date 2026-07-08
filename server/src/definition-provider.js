@@ -62,6 +62,16 @@ class DefinitionProvider extends ServerBase {
             const selectorLocations = this.getEventSelectorLocations(nodeKey);
             if (selectorLocations?.length) return selectorLocations;
 
+            // Member access the type system can't resolve, e.g.
+            // Template.instance().controller.canSendEmail(): fall back to
+            // a name-based lookup over the project's class methods.
+            const classMethodLocations = this.getClassMethodLocations({
+                astWalker,
+                nodeAtPosition,
+                nodeKey,
+            });
+            if (classMethodLocations?.length) return classMethodLocations;
+
             /**
              * This is a "hack": as we want the references, we need to return the current
              * node location. The problem is that this add unnecessary "definitions" sometimes.
@@ -95,6 +105,49 @@ class DefinitionProvider extends ServerBase {
                 _start.column,
                 _end.line - 1,
                 _end.column
+            )
+        );
+    }
+
+    /**
+     * Every class method in the project whose name matches the clicked
+     * identifier. Only fires when the identifier is a non-computed member
+     * property (obj.name), so plain variables never jump into unrelated
+     * classes. Multiple matches surface as a peek list, like WebStorm's
+     * loose name-based resolution.
+     */
+    getClassMethodLocations({ astWalker, nodeAtPosition, nodeKey }) {
+        if (typeof nodeKey !== "string") return;
+
+        const { NODE_TYPES } = require("./ast-helpers");
+
+        let isMemberProperty = false;
+        astWalker.walkUntil((node) => {
+            if (
+                node.type === NODE_TYPES.MEMBER_EXPRESSION &&
+                !node.computed &&
+                node.property === nodeAtPosition
+            ) {
+                isMemberProperty = true;
+                astWalker.stopWalking();
+            }
+        });
+        if (!isMemberProperty) return;
+
+        const definitions =
+            this.indexer.classMethodsIndexer.getDefinitions(nodeKey);
+        if (!definitions) return;
+
+        const { Location, Range } = require("vscode-languageserver");
+        return definitions.map(({ uri, start, end }) =>
+            Location.create(
+                uri.path,
+                Range.create(
+                    start.line - 1,
+                    start.column,
+                    end.line - 1,
+                    end.column
+                )
             )
         );
     }

@@ -117,6 +117,8 @@ const NODE_TYPES = {
     MUSTACHE_STATEMENT: "MustacheStatement",
     // {{#each a}}{{/each}}
     BLOCK_STATEMENT: "BlockStatement",
+    // {{helper (subHelper arg)}}
+    SUB_EXPRESSION: "SubExpression",
     PATH_EXPRESSION: "PathExpression",
     CONTENT_STATEMENT: "ContentStatement",
     IDENTIFIER: "Identifier",

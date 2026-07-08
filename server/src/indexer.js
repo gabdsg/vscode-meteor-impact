@@ -32,6 +32,9 @@ class Indexer extends ServerBase {
         const { SessionKeysIndexer } = require("./session-keys-indexer");
         this.sessionKeysIndexer = new SessionKeysIndexer();
 
+        const { ClassMethodsIndexer } = require("./class-methods-indexer");
+        this.classMethodsIndexer = new ClassMethodsIndexer();
+
         const { MongoSchemaIndexer } = require("./mongo-schema-indexer");
         this.mongoSchemaIndexer = new MongoSchemaIndexer();
         this.mongoSchemaPath = mongoSchemaPath;
@@ -118,6 +121,7 @@ class Indexer extends ServerBase {
             });
 
             this.sessionKeysIndexer.indexCall({ node, uri });
+            this.classMethodsIndexer.indexClass({ node, uri });
             this.mongoSchemaIndexer.indexCollectionDeclarations({ node, uri });
 
             this.blazeIndexer.indexHelpers({ node, uri, fileContent });
@@ -280,6 +284,7 @@ class Indexer extends ServerBase {
                 this.blazeIndexer,
                 this.methodsAndPublicationsIndexer,
                 this.sessionKeysIndexer,
+                this.classMethodsIndexer,
                 this.mongoSchemaIndexer,
             ].forEach((i) => i?.removeUri?.(uri.fsPath));
             delete this.sources[uri.fsPath];
@@ -290,6 +295,7 @@ class Indexer extends ServerBase {
             this.blazeIndexer,
             this.methodsAndPublicationsIndexer,
             this.sessionKeysIndexer,
+            this.classMethodsIndexer,
         ].forEach((i) => i?.removeUri?.(uri.fsPath));
 
         try {
@@ -535,6 +541,7 @@ class Indexer extends ServerBase {
                 this.blazeIndexer,
                 this.methodsAndPublicationsIndexer,
                 this.sessionKeysIndexer,
+                this.classMethodsIndexer,
                 this.mongoSchemaIndexer,
             ].forEach((i) => i?.reset?.());
             // Parse errors surface as in-file diagnostics after the reindex.

@@ -7,7 +7,7 @@
  */
 
 // Bump when the shape of the index maps changes.
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 
 const cacheFilePath = (rootUri) => {
     const crypto = require("crypto");
@@ -85,6 +85,9 @@ const saveIndexCache = async (indexer, uris) => {
             },
             methods: { methodsMap, publicationsMap, usageMap },
             sessionKeys: { keysMap, reactiveDictVars },
+            classMethods: {
+                methodsMap: indexer.classMethodsIndexer.methodsMap,
+            },
             // schemasMap is not cached: it belongs to the external
             // MongoSchema repo and reloads on every start.
             mongoSchema: {
@@ -133,6 +136,10 @@ const loadIndexCache = async (indexer, uris) => {
         Object.assign(
             indexer.sessionKeysIndexer,
             deepReviveUris(data.sessionKeys)
+        );
+        Object.assign(
+            indexer.classMethodsIndexer,
+            deepReviveUris(data.classMethods)
         );
         Object.assign(
             indexer.mongoSchemaIndexer,

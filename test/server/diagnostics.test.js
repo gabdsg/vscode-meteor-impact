@@ -70,8 +70,27 @@ describe("DiagnosticsProvider", () => {
         assert.strictEqual(duplicated.length, 2);
         assert.deepStrictEqual(
             duplicated.map(({ range }) => range.start.line),
-            [6, 10]
+            [11, 15]
         );
+    });
+
+    it("does not flag helpers used only as call arguments", () => {
+        const diagnostics = diagnosticsFor("diag.ts");
+
+        for (const name of [
+            "argOnlyHelper", // block-statement argument
+            "anotherArgHelper",
+            "subExprHelper", // sub-expression argument
+            "hashArgHelper", // hash value
+            "or", // the sub-expression helper itself
+        ]) {
+            assert.ok(
+                !diagnostics.some(({ message }) =>
+                    message.includes(`"${name}"`)
+                ),
+                `${name} is used in the template and should not be flagged`
+            );
+        }
     });
 
     it("flags unused helpers in the defining file", () => {

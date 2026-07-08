@@ -141,6 +141,30 @@ class BlazeIndexer {
         return map[key].push({ node, uri, entryKey });
     }
 
+    /**
+     * Arguments of a mustache/block/sub-expression call are references
+     * too: {{#unless or isPersonalMessage}} passes the isPersonalMessage
+     * helper to "or". Index every PathExpression param and hash value as
+     * a usage so argument-only helpers resolve and are not reported as
+     * unused. @data variables ({{helper @index}}) are never helpers.
+     */
+    indexCallArguments({ node, uri }) {
+        const { NODE_TYPES } = require("./ast-helpers");
+
+        const args = [
+            ...(Array.isArray(node.params) ? node.params : []),
+            ...(node.hash?.pairs || []).map(({ value }) => value),
+        ];
+
+        for (const arg of args) {
+            if (arg?.type !== NODE_TYPES.PATH_EXPRESSION || arg.data) {
+                continue;
+            }
+
+            this.addUsage({ node: arg, uri, key: arg.head });
+        }
+    }
+
     indexGlobalHelpers({ node, uri, fileContent }) {
         const {
             NODE_TYPES,
@@ -342,7 +366,11 @@ class BlazeIndexer {
         const { NODE_TYPES } = require("./ast-helpers");
 
         const { type, params, original, path, name } = node;
-        if (type === NODE_TYPES.MUSTACHE_STATEMENT) {
+        if (
+            type === NODE_TYPES.MUSTACHE_STATEMENT ||
+            type === NODE_TYPES.SUB_EXPRESSION
+        ) {
+            this.indexCallArguments({ node, uri });
             return this.addUsage({
                 node: path,
                 uri,
@@ -356,16 +384,14 @@ class BlazeIndexer {
             return this.addUsage({ node: name, uri, key: name.original });
         }
 
-        if (
-            type === NODE_TYPES.BLOCK_STATEMENT &&
-            Array.isArray(params) &&
-            !!params.length
-        ) {
-            const firstParam = params[0];
+        if (type === NODE_TYPES.BLOCK_STATEMENT) {
+            this.indexCallArguments({ node, uri });
+
+            if (!Array.isArray(params) || !params.length) return;
             return this.addUsage({
-                node: firstParam,
+                node: params[0],
                 uri,
-                key: firstParam.original,
+                key: params[0].original,
             });
         }
 

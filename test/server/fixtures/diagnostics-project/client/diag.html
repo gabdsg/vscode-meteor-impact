@@ -2,6 +2,11 @@
     <div>{{usedHelper}}</div>
     <div>{{badHelper someArg}}</div>
     {{> missingTemplate}}
+    {{#unless or argOnlyHelper anotherArgHelper}}
+        <span>hidden</span>
+    {{/unless}}
+    <div>{{usedHelper (or subExprHelper argOnlyHelper)}}</div>
+    <div>{{usedHelper limit=hashArgHelper}}</div>
 </template>
 
 <template name="dup">

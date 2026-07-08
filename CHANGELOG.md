@@ -4,6 +4,28 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.1.1] - 2026-07-08
+
+### Fixed
+
+-   **Helpers passed as arguments no longer flagged as unused**: a helper
+    referenced only as an argument to another helper - block-statement
+    params (`{{#unless or isPersonalMessage isMessageOnlyToStaff}}`),
+    sub-expression params (`{{helper (or a b)}}`) and hash values
+    (`{{helper limit=maxItems}}`) - was invisible to the usage index, so
+    it was reported as "never used in any template". All call arguments
+    are now indexed as usages (which also makes go-to-definition and
+    find-references see them).
+
+-   **Go to Definition on untyped member calls**: cmd+click on a method
+    call the type system can't resolve - e.g.
+    `Template.instance().controller.canSendEmail()` - now jumps to the
+    matching class method, getter/setter or function-valued class field
+    anywhere in the project (WebStorm-style name-based resolution).
+    Only fires as a last-resort fallback and only on `obj.name` member
+    accesses, so plain identifiers never jump into unrelated classes;
+    multiple same-name matches open a peek list.
+
 ## [2.1.0] - 2026-07-07
 
 ### Added
