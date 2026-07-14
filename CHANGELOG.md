@@ -4,6 +4,18 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.1.3] - 2026-07-14
+
+### Fixed
+
+-   **Helpers passed as template inclusion arguments no longer flagged as
+    unused**: a helper used only as an inclusion argument - positional
+    data context (`{{> dropdown mergeFieldsDropdownController}}`) or hash
+    value (`{{> item subtitle=computedSubtitle}}`) - was invisible to the
+    usage index, so it was reported as "never used in any template".
+    Inclusion arguments are now indexed as usages, like mustache and
+    block-statement arguments already were.
+
 ## [2.1.2] - 2026-07-08
 
 ### Fixed

@@ -380,6 +380,7 @@ class BlazeIndexer {
 
         // Index template tags usage {{> templateName}}
         if (type === NODE_TYPES.PARTIAL_STATEMENT && name) {
+            this.indexCallArguments({ node, uri });
             this.indexDataParams({ node, uri });
             return this.addUsage({ node: name, uri, key: name.original });
         }

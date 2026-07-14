@@ -64,6 +64,25 @@ describe("Template data parameters from inclusion arguments", () => {
         assert.ok(messages.some((m) => m.includes('"shout"')));
     });
 
+    it("counts inclusion arguments as helper usage", () => {
+        const { htmlUsageMap } = indexer.blazeIndexer;
+        // {{> item itemContext}} and {{> item subtitle=computedSubtitle}}
+        // both use helpers of "parent"; neither is unused.
+        assert.ok(htmlUsageMap.itemContext, "positional partial arg indexed");
+        assert.ok(htmlUsageMap.computedSubtitle, "hash partial arg indexed");
+
+        const diagnosticsByUri = createProvider(
+            DiagnosticsProvider
+        ).computeDiagnostics();
+        const key = [...diagnosticsByUri.keys()].find((uri) =>
+            uri.endsWith("parent.js")
+        );
+        const messages = ((key && diagnosticsByUri.get(key)) || []).map(
+            ({ message }) => message
+        );
+        assert.ok(!messages.some((m) => m.includes("never used")), messages);
+    });
+
     it("offers data params in completion inside the template", () => {
         // Inside {{title}} of item.html (line 1, after "{{t").
         const items = createProvider(CompletionProvider).onCompletionRequest({
