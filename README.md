@@ -72,7 +72,8 @@ Works in `.js`, `.ts` and Spacebars `.html` files:
 -   **Meteor Explorer**: an activity bar panel with an app-wide overview
     (templates/helpers/events/methods/publications, with unused markers)
     and the template inclusion hierarchy - it follows the active editor,
-    and has a search filter plus a current-file scope toggle.
+    and has a search filter plus a current-file scope toggle. The panel
+    only appears in Meteor projects.
 -   **Block auto-close**: typing `{{#if ...}}` (or pressing Enter after
     it) inserts the matching `{{/if}}`; block regions fold.
 -   **Inlay hints**: helper call arguments show their parameter name
@@ -141,6 +142,8 @@ including the editor settings that unlock format-on-save, linked tag
 editing, string completions and semantic colors.
 
 -   `auto` -> Enable the file watcher for local packages. You can also set this option by running the command `Toggle Meteor Impact Auto Run` (it is enabled by default).
+
+-   `autoGenerateConfigs` -> Create/update `jsconfig.json` and `.vscode/launch.json` when the extension activates (enabled by default). Turn off to only write them via the `Run Meteor Impact set up manually` / `Re-create Meteor Impact run/debug options` commands. Existing files are always merged into, never replaced.
 
 -   `port` -> Set the port to use for meteor run/debug. Default to 3000.
 

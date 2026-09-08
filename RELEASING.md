@@ -9,6 +9,7 @@ publishes to the VS Code Marketplace and Open VSX. This is the checklist.
 
     ```bash
     npm run test:server
+    npm run test:client
     ```
 
     Then dogfood in the Extension Development Host (F5). The server

@@ -57,6 +57,10 @@
                                 "type": "boolean",
                                 "description": "Should we watch the packages folder and automatically update jsconfig.js"
                             },
+                            "autoGenerateConfigs": {
+                                "type": "boolean",
+                                "description": "Create or update jsconfig.json and .vscode/launch.json when the extension activates. Turn off to only write them through the \"Run Meteor Impact set up manually\" and \"Re-create Meteor Impact run/debug options\" commands."
+                            },
                             "port": {
                                 "type": "string",
                                 "description": "Port to use when building run/debug options."
@@ -100,6 +104,7 @@
                         "additionalProperties": false,
                         "default": {
                             "auto": true,
+                            "autoGenerateConfigs": true,
                             "port": "3000",
                             "additionalArgs": null,
                             "meteorPackageDirs": null,
@@ -198,11 +203,13 @@
             "meteorImpact": [
                 {
                     "id": "meteorImpactOverview",
-                    "name": "App Overview"
+                    "name": "App Overview",
+                    "when": "meteorImpact.isMeteorProject"
                 },
                 {
                     "id": "meteorImpactHierarchy",
-                    "name": "Template Hierarchy"
+                    "name": "Template Hierarchy",
+                    "when": "meteorImpact.isMeteorProject"
                 }
             ]
         },
@@ -311,7 +318,8 @@
         "pretest": "npm run lint",
         "test": "node ./test/runTest.js",
         "test:server": "mocha \"test/server/**/*.test.js\"",
-        "test:coverage": "c8 npm run test:server",
+        "test:client": "mocha \"test/client/**/*.test.js\"",
+        "test:coverage": "c8 mocha \"test/{server,client}/**/*.test.js\"",
         "postinstall": "cd server && npm install && cd ../.."
     },
     "devDependencies": {

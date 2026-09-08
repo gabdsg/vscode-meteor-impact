@@ -97,8 +97,14 @@ async function activate(context) {
         true
     );
 
-    addDebugAndRunOptions();
-    createOrUpdateJsConfigFile();
+    const autoGenerateConfigs = vscode.workspace
+        .getConfiguration()
+        .get("conf.settingsEditor.meteorImpact.autoGenerateConfigs");
+
+    if (autoGenerateConfigs !== false) {
+        addDebugAndRunOptions();
+        createOrUpdateJsConfigFile();
+    }
 
     const createTemplateDisposable = vscode.commands.registerCommand(
         "meteorImpact.createTemplate",

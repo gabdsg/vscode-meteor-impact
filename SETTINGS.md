@@ -13,6 +13,12 @@ All of Meteor Impact's own options live under a single object:
     // Toggle with the "Toggle Meteor Impact Auto Run" command.
     "auto": true,
 
+    // Create or update jsconfig.json and .vscode/launch.json when the
+    // extension activates. Off: only the "Run Meteor Impact set up
+    // manually" and "Re-create Meteor Impact run/debug options" commands
+    // write them. Existing files are always merged into, never replaced.
+    "autoGenerateConfigs": true,
+
     // Port used when generating the run/debug launch configurations.
     "port": "3000",
 
@@ -149,7 +155,10 @@ stay for later), or remove both keys to undo entirely. Related:
 ### Generated files
 
 - `jsconfig.json` and `.vscode/launch.json` are managed by the packages
-  watcher / run options commands. Keep them out of version control.
+  watcher / run options commands. Keep them out of version control. An
+  existing file is always merged into, never replaced; set
+  `autoGenerateConfigs: false` to stop the extension from touching them on
+  activation.
 - If the workspace has a root `tsconfig.json`, the `meteor/*` package
   paths are merged into its `compilerOptions.paths` too (TypeScript
   ignores jsconfig for files a tsconfig covers). The edit preserves
@@ -182,6 +191,7 @@ channel. Leave it `"off"` normally - it is noisy.
 {
     "conf.settingsEditor.meteorImpact": {
         "auto": true,
+        "autoGenerateConfigs": true,
         "port": "3000",
         "additionalArgs": null,
         "meteorPackageDirs": null,

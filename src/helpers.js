@@ -14,18 +14,13 @@ const writeToFile = async (data, targetUri) => {
     }
 };
 
-const createFileFromScratch = async (data, targetPath) => {
-    console.log(`${targetPath} does not exists, creating one...`);
-
-    const resolvedUri = Uri.joinPath(
-        workspace.workspaceFolders[0].uri,
-        targetPath
-    );
+const createFileFromScratch = async (data, targetUri) => {
+    console.log(`${targetUri.fsPath} does not exist, creating one...`);
 
     const baseConfigAsString = JSON.stringify(data, null, 2);
     const encodedBaseConfig = new TextEncoder().encode(baseConfigAsString);
 
-    return writeToFile(encodedBaseConfig, resolvedUri);
+    return writeToFile(encodedBaseConfig, targetUri);
 };
 
 const appendToExistingFile = async (dataObject, targetUri, arrayMergeMode) => {
@@ -51,6 +46,36 @@ const appendToExistingFile = async (dataObject, targetUri, arrayMergeMode) => {
         new TextEncoder().encode(JSON.stringify(newConfig, null, 2)),
         targetUri
     );
+};
+
+// The only entry point for generated config files (launch.json, jsconfig.json).
+// Existence is decided by a direct stat of the known path, never by
+// workspace.findFiles: a file search can come back empty for reasons that have
+// nothing to do with the file being absent (search service still cold, ripgrep
+// killed mid-walk, files.exclude, .gitignore once
+// search.experimental.useIgnoreFilesInFindFiles is on), and treating that as
+// "absent" overwrote users' launch.json. Only FileNotFound means "create";
+// any other stat error means "leave the file alone".
+const createOrMergeJsonFile = async (relativePath, data, arrayMergeMode) => {
+    const targetUri = Uri.joinPath(
+        workspace.workspaceFolders[0].uri,
+        relativePath
+    );
+
+    try {
+        await workspace.fs.stat(targetUri);
+    } catch (e) {
+        if (e?.code !== "FileNotFound") {
+            console.error(
+                `Could not stat ${targetUri.fsPath}, leaving it untouched.`,
+                e
+            );
+            return;
+        }
+        return createFileFromScratch(data, targetUri);
+    }
+
+    return appendToExistingFile(data, targetUri, arrayMergeMode);
 };
 
 // Workaround to reload only the extension.
@@ -142,7 +167,7 @@ const isUsingMeteorPackage = async (pkgName) => {
 };
 
 module.exports = {
-    createFileFromScratch,
+    createOrMergeJsonFile,
     appendToExistingFile,
     toggleAutoRunPackagesWatcher,
     isWindows,
