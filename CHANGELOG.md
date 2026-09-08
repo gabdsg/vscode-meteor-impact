@@ -4,6 +4,35 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.1.4] - 2026-09-08
+
+### Fixed
+
+-   **`.vscode/launch.json` and `jsconfig.json` are never overwritten**:
+    the existence check used `workspace.findFiles`, which can return
+    nothing for a file that exists (search service still cold on a cold
+    start, ripgrep killed mid-walk, `files.exclude`, or `.gitignore`
+    under `search.experimental.useIgnoreFilesInFindFiles`). An empty
+    result was treated as "absent" and the file was replaced with the
+    generated template, destroying custom debug configurations.
+    Existence is now decided by a direct stat of the known path: only a
+    missing file is created, an existing one is merged into, and any
+    other error leaves the file untouched.
+
+### Added
+
+-   **`autoGenerateConfigs` setting** (default `true`): turn it off to
+    stop the extension from creating or updating `jsconfig.json` and
+    `.vscode/launch.json` on activation. The "Run Meteor Impact set up
+    manually" and "Re-create Meteor Impact run/debug options" commands
+    still write them on demand.
+
+### Changed
+
+-   **Meteor Explorer only shows in Meteor projects**: the activity bar
+    icon and its views are hidden in any other workspace, like the
+    Flutter extension's sidebar.
+
 ## [2.1.3] - 2026-07-14
 
 ### Fixed
