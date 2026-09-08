@@ -74,6 +74,15 @@ only triggers the workflow, so keep them matching.
 -   Watch the Actions run for the tag; the "Publish to marketplaces" job
     should be green (check both steps - the Open VSX one can fail quietly
     because of `continue-on-error`).
+-   If the Marketplace step dies with `Request timeout: /_apis/gallery`
+    exactly 3 minutes after "Publishing ...", the GitHub runner cannot
+    reach the gallery API (v2.1.4, 2026-09-08: 5 identical failures over
+    50 minutes while the same endpoint answered a laptop instantly).
+    Nothing gets published on a timeout. Retry once with
+    `gh run rerun <run-id> --failed`; if that fails too, stop retrying
+    and use the manual fallback below with the CI-built `.vsix`.
+    `npx @vscode/vsce show gabdsg.meteor-impact --json` shows the live
+    version.
 -   Marketplace: <https://marketplace.visualstudio.com/items?itemName=gabdsg.meteor-impact>
     (validation can take a few minutes after the job finishes).
 -   Open VSX: <https://open-vsx.org/extension/gabdsg/meteor-impact>
@@ -94,18 +103,27 @@ Actions.
     scope. These expire (max 1 year) - when publishing fails with a 401,
     regenerate the PAT and update the secret.
 -   `OVSX_PAT`: access token from your <https://open-vsx.org> profile
-    settings (namespace `gabdsg`). Optional but nice for
-    VSCodium/Cursor users.
+    settings. Optional but nice for VSCodium/Cursor users. **The
+    `gabdsg` namespace must be created once before the first publish**
+    (`npx ovsx create-namespace gabdsg -p <OVSX_PAT>`); until then every
+    Open VSX step fails with `Unknown publisher: gabdsg` while the run
+    still shows green because of `continue-on-error`. As of 2026-09-08
+    the namespace does not exist and no version has ever reached Open
+    VSX.
 
 ## Manual fallback
 
-If CI is unavailable, you can publish from any machine:
+If CI cannot publish, ship the exact `.vsix` the tag's CI run built and
+integration-tested (the `vsix` artifact of the "Lint, unit tests &
+package" job) from any machine:
 
 ```bash
-npm ci
-npx @vscode/vsce publish -p <VSCE_PAT>
-npx ovsx publish -p <OVSX_PAT>
+gh run download <run-id> -n vsix        # -> meteor-impact-X.Y.Z.vsix
+npx @vscode/vsce publish --packagePath meteor-impact-X.Y.Z.vsix -p <VSCE_PAT>
+npx ovsx publish --packagePath meteor-impact-X.Y.Z.vsix -p <OVSX_PAT>
 ```
 
-Or build the `.vsix` (`npx @vscode/vsce package`) and upload it by hand
-at <https://marketplace.visualstudio.com/manage/publishers/gabdsg>.
+`*.vsix` is gitignored, so the file can sit at the repo root. Building
+locally instead (`npm ci && npx @vscode/vsce publish -p <VSCE_PAT>`) also
+works, as does uploading the `.vsix` by hand at
+<https://marketplace.visualstudio.com/manage/publishers/gabdsg>.
