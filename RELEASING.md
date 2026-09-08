@@ -78,9 +78,12 @@ only triggers the workflow, so keep them matching.
     exactly 3 minutes after "Publishing ...", the GitHub runner cannot
     reach the gallery API (v2.1.4, 2026-09-08: 5 identical failures over
     50 minutes while the same endpoint answered a laptop instantly).
-    Nothing gets published on a timeout. Retry once with
-    `gh run rerun <run-id> --failed`; if that fails too, stop retrying
-    and use the manual fallback below with the CI-built `.vsix`.
+    Nothing gets published on a timeout. Retry with
+    `gh run rerun <run-id> --failed` (free: the repo is public). On
+    v2.1.4 five retries within an hour all failed and the sixth, two
+    hours later, published in 3 seconds - so either wait an hour or two
+    and retry, or use the manual fallback below with the CI-built
+    `.vsix` if it has to go out now.
     `npx @vscode/vsce show gabdsg.meteor-impact --json` shows the live
     version.
 -   Marketplace: <https://marketplace.visualstudio.com/items?itemName=gabdsg.meteor-impact>
