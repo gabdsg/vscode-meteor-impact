@@ -86,12 +86,14 @@ describe("base-configs - generated files never replace existing ones", () => {
 
         await addDebugAndRunOptions();
 
+        // The user's own configs keep their place at the top of the list;
+        // generated ones are appended after them.
         assert.deepStrictEqual(names(LAUNCH), [
+            "My API",
             "Meteor: Run",
             "Meteor: Debug",
-            "My API",
         ]);
-        const mine = JSON.parse(files.get(LAUNCH)).configurations[2];
+        const mine = JSON.parse(files.get(LAUNCH)).configurations[0];
         assert.strictEqual(mine.env.API_SECRET, "keep-me");
     });
 
@@ -115,6 +117,59 @@ describe("base-configs - generated files never replace existing ones", () => {
         await addDebugAndRunOptions();
 
         assert.strictEqual(files.get(LAUNCH), JSON.stringify(userLaunch));
+    });
+
+    it("keeps a user's own settings on a config named like a generated one", async () => {
+        // The customisation that kept disappearing: same name as a generated
+        // config, plus keys the template has no opinion about.
+        files.set(
+            LAUNCH,
+            JSON.stringify({
+                version: "0.2.0",
+                configurations: [
+                    {
+                        type: "node",
+                        request: "launch",
+                        name: "Meteor: Run",
+                        runtimeExecutable: "meteor",
+                        envFile: "${workspaceFolder}/.env",
+                        runtimeArgs: [
+                            "run",
+                            "--port",
+                            "3000",
+                            "--settings",
+                            "settings.json",
+                        ],
+                    },
+                ],
+            })
+        );
+
+        await addDebugAndRunOptions();
+
+        const configs = JSON.parse(files.get(LAUNCH)).configurations;
+        const run = configs.find(({ name }) => name === "Meteor: Run");
+        assert.strictEqual(run.envFile, "${workspaceFolder}/.env");
+        assert.deepStrictEqual(run.runtimeArgs, [
+            "run",
+            "--port",
+            "3000",
+            "--settings",
+            "settings.json",
+        ]);
+        // Nothing from the generated config bleeds into the one we kept.
+        assert.ok(!("noDebug" in run));
+        // A generated config the user does not have is still added.
+        assert.ok(configs.some(({ name }) => name === "Meteor: Debug"));
+    });
+
+    it("leaves a launch.json that already has both generated configs alone", async () => {
+        await addDebugAndRunOptions();
+        const generated = files.get(LAUNCH);
+
+        await addDebugAndRunOptions();
+
+        assert.strictEqual(files.get(LAUNCH), generated);
     });
 
     it("applies the same guard to jsconfig.json", async () => {

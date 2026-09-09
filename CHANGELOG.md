@@ -4,6 +4,20 @@ All notable changes to the "Meteor Impact" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+
+### Fixed
+
+-   **A customised `Meteor: Run` / `Meteor: Debug` is no longer replaced
+    on activation**: the merge listed the generated configurations before
+    the ones in the file, so `uniqBy(..., "name")` resolved a name
+    collision in favour of the template and dropped the user's entry
+    whole -- `envFile`, `--settings`, extra `runtimeArgs` and all. It
+    also let `deepmerge` fold generated keys into the surviving config.
+    A configuration already in `launch.json` now wins on its name and is
+    copied through untouched; generated configurations the file does not
+    have are still appended, after the user's own.
+
 ## [2.1.4] - 2026-09-08
 
 ### Fixed
